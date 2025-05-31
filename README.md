@@ -141,8 +141,8 @@ bash scripts/ablation/run_gold_schema.sh --azure --task {lite, snow} --model o3
 ```
 
 ## Acknowledgements ✨
-This work is jointly developed with [Snowflake AI Research Team](https://www.snowflake.com/en/product/ai/ai-research/).
-![Snowflake](assets/Snowflake.png)
+This work is jointly developed with [Hao AI Lab](https://hao-ai-lab.github.io/).
+![Snowflake](assets/ucsd-hao-ai-lab.png)
 
 ## Citation 📝
 If you find this repository helpful, please cite our work:
