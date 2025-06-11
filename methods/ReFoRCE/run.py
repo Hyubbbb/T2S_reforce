@@ -15,7 +15,7 @@ def execute(question, table_info, args, csv_save_path, log_save_path, sql_save_p
     if full_db_id:
         db_id = full_db_id[sql_data]
 
-    # sql
+    # 1. SQL 환경 초기화
     sql_env = SqlEnv()
     # revote: execute sql if no csv
     if os.path.exists(os.path.join(search_directory, sql_save_path)) and not os.path.exists(os.path.join(search_directory, csv_save_path)) and args.revote:
@@ -44,19 +44,20 @@ def execute(question, table_info, args, csv_save_path, log_save_path, sql_save_p
         logger.info("[Answer format]\n" + format_csv + "\n[Answer format]")
     table_struct = table_info[table_info.find("The table structure information is "):]
 
-    # chat
-    chat_session_ex = None
-    chat_session = None
+    # 2. GPT 채팅 세션 초기화
+    chat_session_ex = None # Column Exploration용 채팅 세션
+    chat_session = None    # 최종 SQL Generation용 채팅 세션
     if args.do_column_exploration:
         chat_session_ex = GPTChat(args.azure, args.column_exploration_model, temperature=args.temperature)
     if args.generation_model:
         chat_session = GPTChat(args.azure, args.generation_model, temperature=args.temperature)
 
-    # agent
+    # 3. REFORCE 에이전트 생성
     agent = REFORCE(args.db_path, sql_data, search_directory, prompt_all, sql_env, chat_session_ex, chat_session, sql_data+'/'+log_save_path, db_id, task=args.task)
 
     # do_column_exploration
     pre_info, response_pre_txt = None, None
+    # 4. 컬럼 탐색 수행 (옵션)
     if args.do_column_exploration:
         pre_info, response_pre_txt, max_try = agent.exploration(question, table_struct, table_info, logger)
         if max_try <= 0:
@@ -67,7 +68,7 @@ def execute(question, table_info, args, csv_save_path, log_save_path, sql_save_p
     csv_save_path = os.path.join(search_directory, csv_save_path)
     sql_save_path = os.path.join(search_directory, sql_save_path)
 
-    # answer
+    # 5. Self-refinement 또는 단순 생성
     if args.do_self_refinement:
         agent.self_refine(args, logger, question, format_csv, table_struct, table_info, response_pre_txt, pre_info, csv_save_path, sql_save_path, task=args.task)
     elif args.generation_model:
@@ -148,6 +149,7 @@ def process_sql_data(sql_data):
     else:
         format_csv = None
 
+    # 각 질문에 대해 여러 번 실행하여 투표
     if args.do_vote:
         num_votes = args.num_votes
         sql_paths = {}

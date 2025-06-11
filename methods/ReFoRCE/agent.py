@@ -13,6 +13,7 @@ csv.field_size_limit(sys.maxsize)
 
 class REFORCE:
     def __init__(self, db_path, sql_data, search_directory, prompt_class: Type[Prompts], sql_env: Type[SqlEnv]=None, chat_session_pre: Type[GPTChat]=None, chat_session: Type[GPTChat]=None, log_save_path=None, db_id=None, task=None):
+        # 초기화: API 설정, 경로 설정, 프롬프트 클래스 등
         self.csv_save_name = "result.csv"
         self.sql_save_name = "result.sql"
         self.log_save_name = "log.log"
@@ -39,6 +40,16 @@ class REFORCE:
 
 
     def execute_sqls(self, sqls, logger):
+        """
+        SQL 실행 및 결과 처리 (여러 sql을 순차적으로 실행하고 결과를 처리)
+
+        Args:
+            sqls: 실행할 SQL 목록
+            logger: 로깅 객체
+
+        Returns:
+            result_dic_list: 실행 결과 딕셔너리 리스트
+        """
         result_dic_list = []
         error_rec = []
         while sqls:
@@ -108,9 +119,28 @@ class REFORCE:
         return result_dic_list
 
     def self_correct(self, sql, error, logger, simplify=False):
+        """
+        SQL 오류 수정 메커니즘 (단발성)
+        : 오류가 있는 SQL을 수정하고, 수정된 SQL을 반환합니다. (GPT 모델을 통해 수정)
+
+        Args:
+            sql: 오류가 있는 SQL
+            error: 오류 메시지
+            logger: 로깅 객체
+            simplify: 단순화 여부
+
+        Returns:
+            response: 수정된 SQL
+        """
+
+        # 1. 오류 메시지를 받아서, GPT에게 수정 요청청
         prompt = self.prompt_class.get_exploration_self_correct_prompt(sql, error)
+        
+        # 2. 단순화 옵션 (결과가 비어있을 때)
         if simplify:
             prompt += "Since the output is empty, please simplify some conditions of the past sql.\n"
+        
+        # 3. 1회 수정 후 즉시 반환
         response = self.chat_session_pre.get_model_response(prompt, "sql")
 
         max_try = self.max_try
@@ -127,6 +157,20 @@ class REFORCE:
         return response_csv
 
     def exploration(self, task, table_struct, table_info, logger):
+        """
+        Column Exploration을 수행합니다.
+
+        Args:
+            task: 작업 설명
+            table_struct: 테이블 구조 정보
+            table_info: 테이블 정보
+            logger: 로깅 객체
+
+        Returns:
+            pre_info: 준비 정보
+            response_pre_txt: 응답 텍스트
+            max_try: 최대 시도 횟수
+        """
         pre_info = ''
         task = table_info + "\nTask: " + task + "\n"
         max_try = self.max_try
@@ -167,6 +211,22 @@ class REFORCE:
         return pre_info, response_pre_txt, max_try
 
     def self_refine(self, args, logger, question, format_csv, table_struct, table_info, response_pre_txt, pre_info, csv_save_path, sql_save_path, task=None):
+        """
+        '최종 답안' SQL의 반복적 개선 단계 (단발성 X)
+        : 오류가 있는 SQL을 수정하고, 수정된 SQL을 반환합니다. (GPT 모델을 통해 수정)
+
+        Args:
+            args: 인자 객체
+            logger: 로깅 객체
+            question: 질문
+            format_csv: 형식화된 CSV
+            table_struct: 테이블 구조 정보
+            table_info: 테이블 정보
+            response_pre_txt: 응답 텍스트
+            pre_info: 준비 정보
+            csv_save_path: CSV 저장 경로
+            sql_save_path: SQL 저장 경로
+        """
         itercount = 0
         results_values = []
         results_tables = []
@@ -332,6 +392,13 @@ class REFORCE:
         sql_env.close_db()
 
     def vote_result(self, search_directory, args, sql_paths, table_info, task):
+        """
+        최종 답안 선택 단계
+        : 여러 후보 SQL 중 가장 많이 등장한 결과를 선택
+        
+        -> 동점일 경우, 추가 처리 로직 적용
+
+        """
         # filter answer
         result = {}
         result_name = {}
@@ -383,7 +450,7 @@ class REFORCE:
         num_with_max_vote = vote_counts.count(max_vote)
         has_tie = num_with_max_vote > (max_vote + 1)
         if has_tie:
-            assert num_with_max_vote % (max_vote + 1) == 0, result_name
+            assert num_with_max_vote % (max_vote + 1) == 0, result_name # assert는 뒤의 조건이 True가 아니면 AssertError를 발생한다. (콤마 뒤에는 메시지; optional)
             if args.model_vote:
                 self.model_vote(result, sql_paths, search_directory, args, table_info, task)
                 return

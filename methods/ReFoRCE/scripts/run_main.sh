@@ -1,8 +1,8 @@
 #!/bin/bash
-set -e
-TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
-AZURE=false
-while [[ $# -gt 0 ]]; do
+  set -e                            # 에러가 나면 즉시 중단
+TIMESTAMP=$(date +"%Y%m%d-%H%M%S")  # 현재 시간을 변수에 저장
+AZURE=false                         # AZURE 변수를 기본값 false로 설정
+while [[ $# -gt 0 ]]; do            # 인자가 남아있는 동안 반복
   key="$1"
   case $key in
     --azure)

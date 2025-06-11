@@ -55,7 +55,7 @@ class Prompts:
         else:
             return "Unsupported API. Please provide a valid API name ('snowflake', 'bigquery', 'sqlite')."
     def get_prompt_dialect_basic(self, api):
-        if api == "snowflake":
+        if api == "snowflake": # 내가 필요한 것것
             return "```sql\nSELECT \"COLUMN_NAME\" FROM DATABASE.SCHEMA.TABLE WHERE ... ``` (Adjust \"DATABASE\", \"SCHEMA\", and \"TABLE\" to match actual names, ensure all column names are enclosed in double quotations)"
         elif api == "bigquery":
             return "```sql\nSELECT `column_name` FROM `database.schema.table` WHERE ... ``` (Replace `database`, `schema`, and `table` with actual names. Enclose column names and table identifiers with backticks.)"
@@ -81,6 +81,10 @@ class Prompts:
         return format_prompt
 
     def get_exploration_prompt(self, api, table_struct):
+        # 10개까지의 탐색용 SQL 생성 지시
+        # 각 데이터베이스 방언별 특수 처리 지침
+        # 중첩 JSON, 문자열 매칭 등 고급 기능 안내
+        
         exploration_prompt = f"Write at most 10 {api} SQL queries for simple to complex ones to final answer in format like:\n {self.get_prompt_dialect_basic(api)}\nin ```sql``` code block to have an understanding of values in related columns.\n"
         exploration_prompt += "Each query should be different. Don't query about any SCHEMA or checking data types. You can write SELECT query only. Try to use DISTINCT. For each SQL LIMIT 20 rows.\n"
         exploration_prompt += "Write annotations to describe each SQL, format like ```sql\n--Description: \n```.\n"

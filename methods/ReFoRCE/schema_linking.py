@@ -46,6 +46,8 @@ def reduce_columns(sql: str, subset_columns: set[str]) -> str:
 
 
 def reduce_ddl(example_path, dictionaries, linked_json, reduce_col=False):
+    # 스키마 링킹 결과를 바탕으로 불필요한 테이블 제거
+    # 컬럼 레벨 필터링으로 추가 압축
     print("Doing schema linking")
     for eg_id in tqdm(dictionaries):
         api = get_api_name(eg_id)
@@ -179,7 +181,9 @@ def ask_model_sl(example_path, json_save_pth):
         with open(json_save_pth, "w") as f:
             json.dump(linked_dic, f, indent=4)
 
-def ask_model_sl_(tb_info, task, chat_session):
+def ask_model_sl_(tb_info, task, chat_session): # sl: schema linking
+    # GPT 모델을 사용하여 각 테이블이 질문과 관련있는지 판단
+    # Y/N 답변과 함께 관련 컬럼 목록 반환
     tbs = get_tb_info(tb_info)
     external = get_external(tb_info)
     linked = []
