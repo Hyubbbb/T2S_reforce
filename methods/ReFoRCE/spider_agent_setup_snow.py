@@ -4,6 +4,11 @@ import shutil
 import zipfile
 import argparse
 
+# 아마 이 부분을 내 DB에 맞게 수정해야 할 것 같음
+# JSONL_PATH = '../../spider2-snow/spider2-snow.jsonl'
+# DATABASE_PATH = '../../spider2-snow/resource/databases/'
+# DOCUMENT_PATH = '../../spider2-snow/resource/documents'
+
 JSONL_PATH = '../../spider2-snow/spider2-snow.jsonl'
 DATABASE_PATH = '../../spider2-snow/resource/databases/'
 DOCUMENT_PATH = '../../spider2-snow/resource/documents'
@@ -70,19 +75,19 @@ def add_snowflake_agent_setting():
 
     snowflake_agent_dir_path = os.path.join('./',args.example_folder)
     
-    clear_folder(snowflake_agent_dir_path)
+    clear_folder(snowflake_agent_dir_path) # 기존 폴더가 존재하면 삭제 후 재생성
 
     if not os.path.exists(snowflake_agent_dir_path):
         os.makedirs(snowflake_agent_dir_path)
-    shutil.copy(JSONL_PATH, snowflake_agent_dir_path)
+    shutil.copy(JSONL_PATH, snowflake_agent_dir_path) # JSONL 파일 복사
 
 
     for example in examples:
         instance_id = example['instance_id']
-        example_path = os.path.join(snowflake_agent_dir_path, f"{instance_id}")
+        example_path = os.path.join(snowflake_agent_dir_path, f"{instance_id}") # 인스턴스 폴더 생성
         if not os.path.exists(example_path):
             os.makedirs(example_path)
-        external_knowledge = example['external_knowledge']
+        external_knowledge = example['external_knowledge'] # 외부 지식 파일 복사
         if external_knowledge != None:
             shutil.copy(os.path.join(DOCUMENT_PATH, external_knowledge), example_path)
 
