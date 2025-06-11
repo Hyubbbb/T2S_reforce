@@ -133,7 +133,7 @@ class REFORCE:
             response: 수정된 SQL
         """
 
-        # 1. 오류 메시지를 받아서, GPT에게 수정 요청청
+        # 1. 오류 메시지를 받아서, GPT에게 수정 요청
         prompt = self.prompt_class.get_exploration_self_correct_prompt(sql, error)
         
         # 2. 단순화 옵션 (결과가 비어있을 때)
