@@ -11,22 +11,41 @@ THRESHOLD = 200000
 WRONG_GOLD_TABLES = ["bq095", "bq350", "bq379", "bq396", "sf_bq084", "sf_bq200","sf_bq226", "sf_bq295", "sf_bq358"]
 SKIP_GOLD_SQLS = ["bq350", "local039", "bq095", "bq374", "bq379", "bq396", "bq403", "bq406", "sf_bq233", "sf_bq273", "sf_local039", "sf_bq295"]
 def process_ddl(ddl_file):
-    table_names = ddl_file['table_name'].to_list()
-    representatives = {}
+    """
+    DDL 파일을 처리하여 테이블 대표 이름을 찾고, 중복된 테이블을 제거합니다.
+
+    Args:
+        ddl_file (pd.DataFrame): DDL 파일을 읽어온 데이터프레임
+
+    Returns:
+        ddl_file (pd.DataFrame): 중복된 테이블을 제거한 DDL 파일
+        representatives (dict): 그룹별 대표 테이블들을 저장한 딕셔너리
+            - Example:
+                representatives = {
+                    'users_': ['users_2020', 'users_2021', 'users_2022', ..., 'users_2023'],  # 15개
+                    'orders_': ['orders_2020', 'orders_2021', 'orders_2022'],  # 3개
+                    'products_': ['products_main']  # 1개
+                }
+    """
+    table_names = ddl_file['table_name'].to_list() # e.g., ['users_2020', 'users_2021', 'orders_2020', 'orders_2021']
+    representatives = {} # 그룹별 대표 테이블들을 저장할 딕셔너리
+
+    # 1. 숫자 제거 후 그룹화
     for i in range(len(ddl_file)):
-        if remove_digits(table_names[i]) in representatives.keys():
+        if remove_digits(table_names[i]) in representatives.keys(): 
             representatives[remove_digits(table_names[i])] += [table_names[i]]
         else:
             representatives[remove_digits(table_names[i])] = [table_names[i]]
 
+    # 2. 중복된 테이블 제거
     for i in range(len(ddl_file)):
         if remove_digits(table_names[i]) in representatives:
-            if len(representatives[remove_digits(table_names[i])]) > 10:
+            if len(representatives[remove_digits(table_names[i])]) > 10: # 10개 이상의 테이블이 있으면 대표 테이블로 선정
                 if ddl_file['table_name'][i] != representatives[remove_digits(table_names[i])][0]:
                     ddl_file = ddl_file.drop(index=i)
             else:
                 # representatives[table_names[i]] = [table_names[i]]
-                del representatives[remove_digits(table_names[i])]
+                del representatives[remove_digits(table_names[i])] # 10개 미만의 테이블이 있으면 그룹 제거
     return ddl_file, representatives
 
 def process_ddl_gold(ddl_file, gold_table_names, entry=None):
@@ -92,6 +111,14 @@ def check_table_names(ddl_path):
     os.replace(temp_path, ddl_path)
 
 def make_folder(args):
+    '''
+    Raw data의 복잡한 폴더 구조를 정리
+
+    - Before: examples_snow/sf_bq070/IDC/bigquery-public-data.idc_v18.dicom_all.json
+                            ↓ Reconstruct ↓
+    - After: examples_snow/sf_bq070/IDC/bigquery-public-data/idc_v18/dicom_all.json
+    '''
+
     print("Make folders for some examples.")
     example_folder = args.example_folder
     for entry in tqdm(os.listdir(example_folder)):
@@ -125,8 +152,63 @@ def make_folder(args):
                         shutil.rmtree(project_name_path)
 
 def compress_ddl(example_folder, add_description=False, add_sample_rows=False, rm_digits=False, schema_linked=False, clear_long_eg_des=False, sqlite_sl_path=None, reduce_col=False, use_gold_table=False, use_gold_schema=False):
+    """데이터베이스 스키마와 메타데이터를 LLM이 읽을 수 있는 프롬프트로 변환합니다.
+    
+    이 함수는 Spider2 데이터셋 예제들을 처리하여 데이터베이스 스키마 정보, 테이블 메타데이터,
+    그리고 외부 지식 문서들을 추출한 후 이를 결합하여 언어 모델이 SQL 생성 작업에 사용할 수 
+    있는 구조화된 프롬프트를 생성합니다.
+    
+    Args:
+        example_folder (str): 예제 인스턴스들이 포함된 폴더 경로 
+            (예: "examples_snow").
+        add_description (bool, optional): 출력 프롬프트에 컬럼 설명을 포함할지 여부. 
+            기본값은 False.
+        add_sample_rows (bool, optional): 각 테이블의 샘플 데이터 행을 포함할지 여부. 
+            기본값은 False.
+        rm_digits (bool, optional): 테이블명에서 숫자를 제거하고 유사한 테이블들을 
+            그룹화할지 여부 (예: users_2021, users_2022 -> users). 기본값은 False.
+        schema_linked (bool, optional): 스키마 링크된 DDL 파일을 사용할지 여부 
+            (DDL.csv 대신 DDL_sl.csv). 기본값은 False.
+        clear_long_eg_des (bool, optional): 프롬프트가 크기 임계값을 초과할 때 
+            긴 설명을 제거할지 여부. 기본값은 False.
+        sqlite_sl_path (str, optional): 로컬 데이터베이스용 SQLite 스키마 링킹 
+            결과 JSON 파일 경로. 기본값은 None.
+        reduce_col (bool, optional): 스키마 링킹 결과를 기반으로 컬럼을 줄일지 여부. 
+            schema_linked=True가 필요함. 기본값은 False.
+        use_gold_table (bool, optional): 골드 표준 테이블명을 사용해 테이블을 
+            필터링할지 여부. 기본값은 False.
+        use_gold_schema (bool, optional): 골드 표준 SQL 스키마를 사용해 테이블과 
+            컬럼을 필터링할지 여부. 기본값은 False.
+    
+    Returns:
+        None: 이 함수는 각 예제 폴더에 처리된 프롬프트를 "prompts.txt" 파일로 
+        저장하지만 값을 반환하지는 않습니다.
+    
+    Raises(예외):
+        FileNotFoundError: 필요한 DDL.csv 또는 JSON 메타데이터 파일이 없는 경우.
+        json.JSONDecodeError: JSON 메타데이터 파일 형식이 잘못된 경우.
+        pandas.errors.EmptyDataError: DDL.csv 파일이 비어있거나 손상된 경우.
+    
+    Note:
+        - 생성된 프롬프트는 각 예제 디렉토리에 "prompts.txt"로 저장됩니다
+        - 200KB 임계값을 초과하는 프롬프트는 자동으로 압축됩니다
+        - .md 파일의 외부 지식이 있으면 자동으로 포함됩니다
+        - 로컬 SQLite 데이터베이스의 경우 get_sqlite_data() 함수를 사용합니다
+        - 테이블 구조 정보는 다음 형식으로 포맷됩니다: 
+          {데이터베이스명: {스키마명: [테이블명들]}}
+    
+    Example:
+        >>> compress_ddl(
+        ...     example_folder="examples_snow",
+        ...     add_description=True,
+        ...     add_sample_rows=True,
+        ...     rm_digits=True,
+        ...     clear_long_eg_des=True
+        ... )
+        # examples_snow/ 내 모든 예제를 처리하고 prompts.txt 파일들을 생성합니다
+    """
     print("Compress DDL files.")
-    for entry in tqdm(os.listdir(example_folder)):
+    for entry in tqdm(os.listdir(example_folder)): # 각 example 폴더 순회
         external_knowledge = None
         prompts = ''
         entry1_path = os.path.join(example_folder, entry)
@@ -237,9 +319,11 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                                             
                                             col_names = matched["ddl"]
                                         column_prefix = "column_"
+
+                                        # 컬럼 정보 추가
                                         for j in range(len(table_json[f"{column_prefix}names"])):
                                             table_des = ''
-                                            if add_description:
+                                            if add_description: # --add_description 플래그 사용 시
                                                 if j < len(table_json["description"]):
                                                     table_des = " Description: " + str(table_json["description"][j]) if table_json["description"][j] else ""
                                                 elif table_json[f"column_names"][j] != "_PARTITIONTIME":
@@ -255,7 +339,9 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                                                     prompts += "Column name: " + table_json[f"{column_prefix}names"][j] + " Type: " + table_json[f"{column_prefix}types"][j] + table_des +"\n"
                                             else:
                                                 prompts += "Column name: " + table_json[f"{column_prefix}names"][j] + " Type: " + table_json[f"{column_prefix}types"][j] + table_des +"\n"
-                                        if add_sample_rows:                                            
+                                        
+                                        # 샘플 데이터 추가
+                                        if add_sample_rows: # --add_sample_rows 플래그 사용 시
                                             if reduce_col and ddl_sl_flag:
                                                 sample_rows = [{col: row[col] for col in extract_column_names(col_names) if col in row} for row in table_json["sample_rows"]]
                                             elif use_gold_schema:
@@ -285,9 +371,9 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                                         prompts += f.read()
                                         print(f.read())
 
-                    elif is_file(project_name_path, "md"):
+                    elif is_file(project_name_path, "md"): # .md 파일의 외부 지식이 있으면 자동으로 포함
                         with open(project_name_path) as f:
-                            external_knowledge = f.read()                
+                            external_knowledge = f.read() # 외부 지식 파일 읽기
             else:
                 for sqlite in os.listdir(entry1_path):
                     if sqlite.endswith(".sqlite"):
@@ -301,22 +387,25 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                             external_knowledge = "Retrieved columns and values: " + str(sl_info['L_values']) if sl_info['L_values'] else ""
                 table_names, prompts = get_sqlite_data(sqlite_path, entry, add_description=add_description, add_sample_rows=add_sample_rows, gold_table_names=gold_table_names, gold_column_names=gold_column_names)
             with open(os.path.join(entry1_path, "prompts.txt"), "w") as f:
+                # 200KB 임계값을 초과하는 프롬프트는 자동으로 압축
                 if len(prompts) > THRESHOLD:
                     # print(f"{entry} len before clearing sample rows1: {len(prompts)}")
                     prompts = clear_sample_rows(prompts, byte_limit=10000)
-                    # print(f"sample rows cleared len1: {len(prompts)}")                     
+                    # print(f"sample rows cleared len1: {len(prompts)}")                   
+
                 if len(prompts) > THRESHOLD and clear_long_eg_des:
                     # print(f"{entry} len before clearing description: {len(prompts)}")
                     prompts = clear_description(prompts)
                     # print(f"description cleared len: {len(prompts)}")
 
-                prompts += f"External knowledge that might be helpful: \n{external_knowledge}\n"
+                prompts += f"External knowledge that might be helpful: \n{external_knowledge}\n" # 여기서 Documents 정보 추가
                 if not entry.startswith("local"):
                     prompts += "The table structure information is ({database name: {schema name: [table name]}}): \n" + str(table_dict) + "\n"
                 else:
                     prompts += "The table structure information is (table names): \n" + str(table_names) + "\n"
-                f.writelines(prompts)
+                f.writelines(prompts) # 최종 프롬프트 저장
 
+# 쓸 일 없을 것으로 보임
 def get_sqlite_data(path, entry, add_description=False, add_sample_rows=False, gold_table_names=None, gold_column_names=None):
     connection = sqlite3.connect(path)
     cursor = connection.cursor()

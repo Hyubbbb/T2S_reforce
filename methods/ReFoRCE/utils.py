@@ -146,6 +146,9 @@ def clear_description(table_info):
     return re.sub(r"Description:[^\n]*", "", table_info)
 
 def get_table_info(test_path, sql_data, api, clear_des=False, full_tb_info=None):
+    """
+    테이블 정보를 가져오는 함수
+    """
     if full_tb_info:
         return full_tb_info[sql_data]
     else:
@@ -172,7 +175,15 @@ def get_api_name(sql_data):
         raise NotImplementedError("Invalid file name.")
 
 def remove_digits(s):
-    return re.sub(r'\d', '', s)
+    '''
+    모든 숫자를 제거
+
+    Examples:
+        - "users_2020"  → `remove_digits()` → "users_"
+        - "users_2021"  → `remove_digits()` → "users_"
+        - "orders_2020" → `remove_digits()` → "orders_"
+    '''
+    return re.sub(r'\d', '', s) # 모든 숫자를 제거
 
 def is_file(filepath, suffix):
     return os.path.isfile(filepath) and filepath.lower().endswith(suffix)

@@ -1,4 +1,7 @@
 #!/bin/bash
+# 실행 명령어:
+# ./run_main.sh --task snow --model o3
+
   set -e                            # 에러가 나면 즉시 중단
 TIMESTAMP=$(date +"%Y%m%d-%H%M%S")  # 현재 시간을 변수에 저장
 AZURE=false                         # AZURE 변수를 기본값 false로 설정
@@ -25,17 +28,19 @@ while [[ $# -gt 0 ]]; do            # 인자가 남아있는 동안 반복
   esac
 done
 
-# # Set up
-if [ "$TASK" = "lite" ]; then
-    gdown 'https://drive.google.com/uc?id=1coEVsCZq-Xvj9p2TnhBFoFTsY-UoYGmG' -O ../../spider2-lite/resource/
-    rm -rf ../../spider2-lite/resource/databases/spider2-localdb
-    mkdir -p ../../spider2-lite/resource/databases/spider2-localdb
-    unzip ../../spider2-lite/resource/local_sqlite.zip -d ../../spider2-lite/resource/databases/spider2-localdb
-fi
+# # Set up (Lite 태스크 안 할 거면 필요 없을듯)
+# if [ "$TASK" = "lite" ]; then
+#     gdown 'https://drive.google.com/uc?id=1coEVsCZq-Xvj9p2TnhBFoFTsY-UoYGmG' -O ../../spider2-lite/resource/
+#     rm -rf ../../spider2-lite/resource/databases/spider2-localdb
+#     mkdir -p ../../spider2-lite/resource/databases/spider2-localdb
+#     unzip ../../spider2-lite/resource/local_sqlite.zip -d ../../spider2-lite/resource/databases/spider2-localdb
+# fi
 
+# 1. Snowflake Agent 설정 
 python spider_agent_setup_${TASK}.py --example_folder examples_${TASK}
 
-# Reconstruct data
+# 2. Reconstruct data (Compress data)
+  # : Spider 2.0 데이터셋의 raw data를 LLM이 사용할 수 있는 구조화된 프롬프트로 변환
 python reconstruct_data.py \
     --example_folder examples_${TASK} \
     --add_description \
@@ -44,16 +49,20 @@ python reconstruct_data.py \
     --make_folder \
     --clear_long_eg_des
 
+# 3. Prompt.txt 파일 중 200KB 이상인 파일 개수 확인
 echo "Number of prompts.txt files in examples_${TASK} larger than 200KB before reducing: $(find examples_${TASK} -type f -name "prompts.txt" -exec du -b {} + | awk '$1 > 200000' | wc -l)"
 
-# Run Schema linking and voting
+# 4. Run Schema linking and voting
 python schema_linking.py \
     --task $TASK \
     --db_path examples_${TASK} \
     --linked_json_pth ../../data/linked_${TASK}_tmp0.json \
     --reduce_col
 
+# 5. (재확인) Prompt.txt 파일 중 200KB 이상인 파일 개수 확인
 echo "Number of prompts.txt files in examples_${TASK} larger than 200KB before reducing: $(find examples_${TASK} -type f -name "prompts.txt" -exec du -b {} + | awk '$1 > 200000' | wc -l)"
+
+#### Run ReFoRCE ####
 
 OUTPUT_PATH="output/${API}-${TASK}-log-${TIMESTAMP}"
 # OUTPUT_PATH="output/${API}-${TASK}-log"

@@ -84,13 +84,23 @@ def main(args):
 
     print("Finished")
 
-def process_sql_data(sql_data):
+def process_sql_data(sql_data): # sql_data = "sf_bq070"
+    """
+    개별 인스턴스 처리 함수
+
+    Args:
+        sql_data (str): 처리할 인스턴스 ID
+
+    Returns:
+        None
+    """
+    # 초기 설정
     start_time = time.time()
 
     print(sql_data)
 
-    question = task_dict[sql_data]
-    search_directory = os.path.join(args.output_path, sql_data)
+    question = task_dict[sql_data] # "Find top 5 customers..."
+    search_directory = os.path.join(args.output_path, sql_data) # "output/o3-snow-log/sf_bq070"
 
     # Create agent object
     agent_format = REFORCE(args.db_path, sql_data, search_directory, prompt_all)
@@ -156,11 +166,12 @@ def process_sql_data(sql_data):
         threads = []
 
         for i in range(num_votes):
-            csv_save_pathi = str(i) + agent_format.csv_save_name
-            log_pathi = str(i) + agent_format.log_save_name
-            sql_save_pathi = str(i) + agent_format.sql_save_name
-            sql_paths[sql_save_pathi] = csv_save_pathi
+            csv_save_pathi = str(i) + agent_format.csv_save_name    # "0result.csv", "1result.csv", "2result.csv" (각각 첫 번째, 두 번째, 세 번째 시도)
+            log_pathi = str(i) + agent_format.log_save_name         # "0log.log", "1log.log", "2log.log"
+            sql_save_pathi = str(i) + agent_format.sql_save_name    # "0result.sql", "1result.sql", "2result.sql"
+            sql_paths[sql_save_pathi] = csv_save_pathi 
 
+            # 각각을 별도 스레드에서 실행
             thread = threading.Thread(
                 target=execute,
                 args=(

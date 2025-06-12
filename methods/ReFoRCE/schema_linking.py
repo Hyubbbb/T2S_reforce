@@ -155,15 +155,26 @@ Task: {1}
 """
 
 def ask_model_sl(example_path, json_save_pth):
+    """
+    Schema linking을 수행하는 함수
+    Args:
+        example_path (str): 예제 폴더 경로
+        json_save_pth (str): 스키마 링킹 결과를 저장할 파일 경로
+
+    Returns:
+        linked_dic (dict): 스키마 링킹 결과
+    """
     linked_dic = {}
 
     def process_example(ex_id):
-        if ex_id.startswith("local"):
+        if ex_id.startswith("local"): # SQLite 기반 local 예제는 스키마 링킹에서 제외 (Local 에제는 이미 작은 규모)
             return None, None
-        tb_info_pth = search_file(os.path.join(example_path, ex_id), "prompts.txt")
+        
+        tb_info_pth = search_file(os.path.join(example_path, ex_id), "prompts.txt") # 프롬프트 파일 경로 찾기
         assert len(tb_info_pth) == 1
         with open(tb_info_pth[0]) as f:
             tb_info = f.read()
+
         task = task_dict[ex_id]
         chat_session = GPTChat(azure=True, model="gpt-4o-rag-research", temperature=0)
         result = ask_model_sl_(tb_info, task, chat_session)
@@ -171,11 +182,14 @@ def ask_model_sl(example_path, json_save_pth):
 
     linked_dic = {}
     print("Doing table-level schema linking")
+
+    # 32개의 스레드를 사용하여 병렬 처리
     with ThreadPoolExecutor(max_workers=32) as executor:
         futures = [executor.submit(process_example, ex_id) for ex_id in dictionaries]
+
         for future in tqdm(as_completed(futures), total=len(futures), desc="Processing"):
-            ex_id, result = future.result()
-            if ex_id is not None:
+            ex_id, result = future.result() # process_example의 결과 반환
+            if ex_id is not None: # 예외 처리
                 linked_dic[ex_id] = result
 
         with open(json_save_pth, "w") as f:

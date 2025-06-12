@@ -103,10 +103,12 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    add_snowflake_agent_setting()
+    # 1. 새로운 examples_snow 폴더 생성 -> JSONL 안에 있는 instance_id별로 폴더 생성 후 파일 복사 (external_knowledge 파일이 있는 경우 이것도 복사)
+    add_snowflake_agent_setting() 
 
+    # 2. Snowflake credential 복사
     setup_snowflake()
 
-
+    # 3. DB Schema 추가
     setup_add_schema(args)
 
