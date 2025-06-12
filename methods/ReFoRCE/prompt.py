@@ -1,83 +1,83 @@
-omni_sql_input_prompt_template = '''Task Overview:
-You are a data science expert. Below, you are provided with a database schema and a natural language question. Your task is to understand the schema and generate a valid SQL query to answer the question.
+omni_sql_input_prompt_template = '''작업 개요:
+당신은 데이터 사이언스 전문가입니다. 아래에 데이터베이스 스키마와 자연어 질문이 제공됩니다. 스키마를 이해하고 질문에 답하는 유효한 SQL 쿼리를 생성하는 것이 당신의 작업입니다.
 
-Database Engine:
+데이터베이스 엔진:
 {db_engine}
 
-Database Schema:
+데이터베이스 스키마:
 {db_details}
-This schema describes the database's structure, including tables, columns, primary keys, foreign keys, and any relevant relationships or constraints.
+이 스키마는 테이블, 컬럼, 기본 키, 외래 키, 관련 관계 또는 제약 조건을 포함한 데이터베이스의 구조를 설명합니다.
 
-Question:
+질문:
 {question}
 
-Instructions:
-- Make sure you only output the information that is asked in the question. If the question asks for a specific column, make sure to only include that column in the SELECT clause, nothing more.
-- The generated query should return all of the information asked in the question without any missing or extra information.
-- Before generating the final SQL query, please think through the steps of how to write the query.
+지시사항:
+- 질문에서 요구하는 정보만 출력하세요. 질문에서 특정 컬럼을 요구하면 SELECT 절에 해당 컬럼만 포함하세요.
+- 생성된 쿼리는 질문에서 요구하는 모든 정보를 누락이나 추가 정보 없이 반환해야 합니다.
+- 최종 SQL 쿼리를 생성하기 전에 쿼리 작성 단계를 차근차근 생각해주세요.
 
-Output Format:
-In your answer, please enclose the generated SQL query in a code block:
+출력 형식:
+답변에서 생성된 SQL 쿼리를 코드 블록으로 묶어주세요:
 ```sql
--- Your SQL query
+-- 당신의 SQL 쿼리
 ```
 
-Take a deep breath and think step by step to find the correct SQL query.
+차근차근 생각하며 올바른 SQL 쿼리를 찾으세요.
 '''
 
 class Prompts:
     def __init__(self):
         pass
     def get_condition_onmit_tables(self):
-        return ["-- Include all", "-- Omit", "-- Continue", "-- Union all", "-- ...", "-- List all", "-- Replace this", "-- Each table", "-- Add other"]
+        return ["-- 모든 것 포함", "-- 생략", "-- 계속", "-- 모든 것 통합", "-- ...", "-- 모든 것 나열", "-- 이것을 대체", "-- 각 테이블", "-- 기타 추가"]
     def get_prompt_dialect_list_all_tables(self, table_struct, api):
         if api == "snowflake":
-            return f"When performing a UNION operation on many tables, ensure that all table names are explicitly listed. Union first and then add condition and selection. e.g. SELECT \"col1\", \"col2\" FROM (TABLE1 UNION ALL TABLE2) WHERE ...; Don't write sqls as (SELECT col1, col2 FROM TABLE1 WHERE ...) UNION ALL (SELECT col1, col2 FROM TABLE2 WHERE ...); Don't use {self.get_condition_onmit_tables()} to omit any table. Table names here: {table_struct}\n"
+            return f"여러 테이블에 대해 UNION 연산을 수행할 때는 모든 테이블 이름을 명시적으로 나열하세요. 먼저 Union을 수행한 후 조건과 선택을 추가하세요. 예: SELECT \"col1\", \"col2\" FROM (TABLE1 UNION ALL TABLE2) WHERE ...; 다음과 같이 작성하지 마세요: (SELECT col1, col2 FROM TABLE1 WHERE ...) UNION ALL (SELECT col1, col2 FROM TABLE2 WHERE ...); {self.get_condition_onmit_tables()}를 사용하여 테이블을 생략하지 마세요. 여기 테이블 이름들: {table_struct}\n"
         elif api == "bigquery":
-            return "When performing a UNION operation on many tables with similar prefix, you can use a wildcard table to simplify your query. e.g., SELECT col1, col2 FROM `project_id.dataset_id.table_prefix*` WHERE _TABLE_SUFFIX IN ('table1_suffix', 'table2_suffix');. Avoid manually listing tables unless absolutely necessary.\n"
+            return "유사한 접두사를 가진 여러 테이블에 대해 UNION 연산을 수행할 때는 와일드카드 테이블을 사용하여 쿼리를 단순화할 수 있습니다. 예: SELECT col1, col2 FROM `project_id.dataset_id.table_prefix*` WHERE _TABLE_SUFFIX IN ('table1_suffix', 'table2_suffix'); 꼭 필요한 경우가 아니면 테이블을 수동으로 나열하는 것을 피하세요.\n"
         else:
             return ""
     def get_prompt_fuzzy_query(self):
-        return "For string-matching scenarios, if the string is decided, don't use fuzzy query. e.g. Get the object's title contains the word \"book\"\nHowever, if the string is not decided, you may use fuzzy query and ignore upper or lower case. e.g. Get articles that mention \"education\".\n"
+        return "문자열 매칭 시나리오에서 문자열이 확정된 경우 퍼지 쿼리를 사용하지 마세요. 예: \"book\"이라는 단어가 포함된 객체의 제목 가져오기\n하지만 문자열이 확정되지 않은 경우 퍼지 쿼리를 사용하고 대소문자를 구분하지 마세요. 예: \"교육\"을 언급하는 기사 가져오기.\n"
     def get_prompt_decimal_places(self):
-        return "If the task description does not specify the number of decimal places, retain all decimals to four places.\n"
+        return "작업 설명에서 소수점 자릿수를 지정하지 않은 경우 모든 소수를 네 자리까지 유지하세요.\n"
     def get_prompt_convert_symbols(self):
-        return "For string-matching scenarios, convert non-standard symbols to '%'. e.g. ('he’s to he%s)\n"
+        return "문자열 매칭 시나리오에서 비표준 기호를 '%'로 변환하세요. 예: ('he's를 he%s로)\n"
     def get_prompt_knowledge(self):
-        return "Your knowledge is based on information in database. Don't use your own knowledge.\n"
+        return "당신의 지식은 데이터베이스의 정보를 기반으로 합니다. 자신의 지식을 사용하지 마세요.\n"
     def get_prompt_dialect_nested(self, api):
         if api == "snowflake":
-            return "For columns in json nested format: e.g. SELECT t.\"column_name\", f.value::VARIANT:\"key_name\"::STRING AS \"abstract_text\" FROM PATENTS.PATENTS.PUBLICATIONS t, LATERAL FLATTEN(input => t.\"json_column_name\") f; DO NOT directly answer the task and ensure all column names are enclosed in double quotations. For nested columns like event_params, when you don't know the structure of it, first watch the whole column: SELECT f.value FROM table, LATERAL FLATTEN(input => t.\"event_params\") f;\n"
+            return "JSON 중첩 형식의 컬럼의 경우: 예: SELECT t.\"column_name\", f.value::VARIANT:\"key_name\"::STRING AS \"abstract_text\" FROM PATENTS.PATENTS.PUBLICATIONS t, LATERAL FLATTEN(input => t.\"json_column_name\") f; 작업에 직접 답하지 말고 모든 컬럼 이름이 큰따옴표로 묶여 있는지 확인하세요. event_params와 같은 중첩 컬럼의 구조를 모르는 경우 먼저 전체 컬럼을 확인하세요: SELECT f.value FROM table, LATERAL FLATTEN(input => t.\"event_params\") f;\n"
         elif api == "bigquery":
-            return "Extract a specific key from a nested JSON column: SELECT t.\"column_name\", JSON_EXTRACT_SCALAR(f.value, \"$.key_name\") AS \"abstract_text\" FROM `database.schema.table` AS t, UNNEST(JSON_EXTRACT_ARRAY(t.\"json_column_name\")) AS f;\nWhen the structure of the nested column (e.g., event_params) is unknown, first inspect the whole column: SELECT f.value FROM `project.dataset.table` AS t, UNNEST(JSON_EXTRACT_ARRAY(t.\"event_params\")) AS f;\n"
+            return "중첩된 JSON 컬럼에서 특정 키 추출: SELECT t.\"column_name\", JSON_EXTRACT_SCALAR(f.value, \"$.key_name\") AS \"abstract_text\" FROM `database.schema.table` AS t, UNNEST(JSON_EXTRACT_ARRAY(t.\"json_column_name\")) AS f;\n중첩 컬럼(예: event_params)의 구조를 모르는 경우 먼저 전체 컬럼을 검사하세요: SELECT f.value FROM `project.dataset.table` AS t, UNNEST(JSON_EXTRACT_ARRAY(t.\"event_params\")) AS f;\n"
         elif api == "sqlite":
-            return "Extract a specific key from a nested JSON column: SELECT t.\"column_name\", json_extract(f.value, '$.key_name') AS \"abstract_text\" FROM \"table_name\" AS t, json_each(t.\"json_column_name\") AS f;\nWhen the structure of the nested column (e.g., event_params) is unknown, first inspect the whole column: SELECT f.value FROM \"table_name\" AS t, json_each(t.\"event_params\") AS f;\n"
+            return "중첩된 JSON 컬럼에서 특정 키 추출: SELECT t.\"column_name\", json_extract(f.value, '$.key_name') AS \"abstract_text\" FROM \"table_name\" AS t, json_each(t.\"json_column_name\") AS f;\n중첩 컬럼(예: event_params)의 구조를 모르는 경우 먼저 전체 컬럼을 검사하세요: SELECT f.value FROM \"table_name\" AS t, json_each(t.\"event_params\") AS f;\n"
         else:
-            return "Unsupported API. Please provide a valid API name ('snowflake', 'bigquery', 'sqlite')."
+            return "지원되지 않는 API입니다. 유효한 API 이름('snowflake', 'bigquery', 'sqlite')을 제공해주세요."
     def get_prompt_dialect_basic(self, api):
-        if api == "snowflake": # 내가 필요한 것것
-            return "```sql\nSELECT \"COLUMN_NAME\" FROM DATABASE.SCHEMA.TABLE WHERE ... ``` (Adjust \"DATABASE\", \"SCHEMA\", and \"TABLE\" to match actual names, ensure all column names are enclosed in double quotations)"
+        if api == "snowflake":
+            return "```sql\nSELECT \"COLUMN_NAME\" FROM DATABASE.SCHEMA.TABLE WHERE ... ``` (\"DATABASE\", \"SCHEMA\", \"TABLE\"을 실제 이름에 맞게 조정하고, 모든 컬럼 이름이 큰따옴표로 묶여 있는지 확인하세요)"
         elif api == "bigquery":
-            return "```sql\nSELECT `column_name` FROM `database.schema.table` WHERE ... ``` (Replace `database`, `schema`, and `table` with actual names. Enclose column names and table identifiers with backticks.)"
+            return "```sql\nSELECT `column_name` FROM `database.schema.table` WHERE ... ``` (`database`, `schema`, `table`을 실제 이름으로 바꾸세요. 컬럼 이름과 테이블 식별자를 백틱으로 묶으세요.)"
         elif api == "sqlite":
-            return "```sql\nSELECT DISTINCT \"column_name\" FROM \"table_name\" WHERE ... ``` (Replace \"table_name\" with the actual table name. Enclose table and column names with double quotations if they contain special characters or match reserved keywords.)"
+            return "```sql\nSELECT DISTINCT \"column_name\" FROM \"table_name\" WHERE ... ``` (\"table_name\"을 실제 테이블 이름으로 바꾸세요. 특수 문자가 포함되거나 예약어와 일치하는 경우 테이블과 컬럼 이름을 큰따옴표로 묶으세요.)"
         else:
-            raise NotImplementedError("Unsupported API. Please provide a valid API name ('snowflake', 'bigquery', 'sqlite').")
+            raise NotImplementedError("지원되지 않는 API입니다. 유효한 API 이름('snowflake', 'bigquery', 'sqlite')을 제공해주세요.")
     def get_prompt_dialect_string_matching(self, api):
         if api == "snowflake":
-            return "Don't directly match strings if you are not convinced. Use fuzzy query first: WHERE str ILIKE \"%target_str%\" For string matching, e.g. meat lovers, you should use % to replace space. e.g. ILKIE %meat%lovers%.\n"
+            return "확신이 서지 않는 경우 문자열을 직접 매치하지 마세요. 먼저 퍼지 쿼리를 사용하세요: WHERE str ILIKE \"%target_str%\" 문자열 매칭의 경우, 예를 들어 meat lovers, 공백을 %로 바꿔야 합니다. 예: ILIKE %meat%lovers%.\n"
         elif api == "bigquery":
-            return "Don't directly match strings if you are not convinced. Use LOWER for fuzzy queries: WHERE LOWER(str) LIKE LOWER('%target_str%'). For example, to match 'meat lovers', use LOWER(str) LIKE '%meat%lovers%'.\n"
+            return "확신이 서지 않는 경우 문자열을 직접 매치하지 마세요. 퍼지 쿼리에는 LOWER를 사용하세요: WHERE LOWER(str) LIKE LOWER('%target_str%'). 예를 들어 'meat lovers'를 매치하려면 LOWER(str) LIKE '%meat%lovers%'를 사용하세요.\n"
         elif api == "sqlite":
-            return "Don't directly match strings if you are not convinced. For fuzzy queries, use: WHERE str LIKE '%target_str%'. For example, to match 'meat lovers', use WHERE str LIKE '%meat%lovers%'. If case sensitivity is needed, add COLLATE BINARY: WHERE str LIKE '%target_str%' COLLATE BINARY.\n"
+            return "확신이 서지 않는 경우 문자열을 직접 매치하지 마세요. 퍼지 쿼리의 경우: WHERE str LIKE '%target_str%'를 사용하세요. 예를 들어 'meat lovers'를 매치하려면 WHERE str LIKE '%meat%lovers%'를 사용하세요. 대소문자 구분이 필요한 경우 COLLATE BINARY를 추가하세요: WHERE str LIKE '%target_str%' COLLATE BINARY.\n"
         else:
-            raise NotImplementedError("Unsupported API. Please provide a valid API name ('snowflake', 'bigquery', 'sqlite').")
+            raise NotImplementedError("지원되지 않는 API입니다. 유효한 API 이름('snowflake', 'bigquery', 'sqlite')을 제공해주세요.")
 
     def get_format_prompt(self):
-        format_prompt = "This is an SQL task. Please provide the simplest possible answer format in ```csv``` format like a table.\n"
-        format_prompt += "e.g.1. Including the travel coordinates and the cumulative travel distance at each point. Format: ```csv\ntravel_coordinates,cumulative_travel_distance\nPOINT(longitude1 latitude1),distance1:int\nPOINT(longitude2 latitude2),distance2:int\n...```\n"
-        format_prompt += "When asked something without specifying name or id, provide both. e.g.2. Which products had a seasonality-adjusted sales ratio that stayed consistently above 2 for every month in the year 2017? Format: ```csv\nproduct_name,product_id\nproduct_name1:str,product_id1:int\n...```\n"
-        format_prompt += "Do not output any SQL queries.\n"
+        format_prompt = "이것은 SQL 작업입니다. 테이블과 같은 ```csv``` 형식으로 가장 간단한 답변 형식을 제공하세요.\n"
+        format_prompt += "예시1. 각 지점에서의 여행 좌표와 누적 여행 거리 포함. 형식: ```csv\ntravel_coordinates,cumulative_travel_distance\nPOINT(longitude1 latitude1),distance1:int\nPOINT(longitude2 latitude2),distance2:int\n...```\n"
+        format_prompt += "이름이나 ID를 지정하지 않고 질문할 때는 둘 다 제공하세요. 예시2. 2017년 매월 계절성 조정 판매 비율이 지속적으로 2 이상을 유지한 제품은? 형식: ```csv\nproduct_name,product_id\nproduct_name1:str,product_id1:int\n...```\n"
+        format_prompt += "SQL 쿼리를 출력하지 마세요.\n"
         return format_prompt
 
     def get_exploration_prompt(self, api, table_struct):
@@ -85,9 +85,9 @@ class Prompts:
         # 각 데이터베이스 방언별 특수 처리 지침
         # 중첩 JSON, 문자열 매칭 등 고급 기능 안내
         
-        exploration_prompt = f"Write at most 10 {api} SQL queries for simple to complex ones to final answer in format like:\n {self.get_prompt_dialect_basic(api)}\nin ```sql``` code block to have an understanding of values in related columns.\n"
-        exploration_prompt += "Each query should be different. Don't query about any SCHEMA or checking data types. You can write SELECT query only. Try to use DISTINCT. For each SQL LIMIT 20 rows.\n"
-        exploration_prompt += "Write annotations to describe each SQL, format like ```sql\n--Description: \n```.\n"
+        exploration_prompt = f"최종 답변을 위해 간단한 것부터 복잡한 것까지 최대 10개의 {api} SQL 쿼리를 다음 형식으로 작성하세요:\n {self.get_prompt_dialect_basic(api)}\n```sql``` 코드 블록에서 관련 컬럼의 값들을 이해하기 위해.\n"
+        exploration_prompt += "각 쿼리는 다르게 작성해야 합니다. SCHEMA나 데이터 타입 확인에 대한 쿼리는 작성하지 마세요. SELECT 쿼리만 작성할 수 있습니다. DISTINCT를 사용해보세요. 각 SQL은 20행으로 제한하세요.\n"
+        exploration_prompt += "각 SQL에 대한 설명을 작성하세요. 형식: ```sql\n--설명: \n```.\n"
 
         exploration_prompt += self.get_prompt_dialect_nested(api)
                 
@@ -95,21 +95,21 @@ class Prompts:
         
         exploration_prompt += self.get_prompt_dialect_string_matching(api)
         
-        exploration_prompt += "For time-related queries, given the variety of formats, avoid using time converting functions unless you are certain of the specific format being used.\n"
+        exploration_prompt += "시간 관련 쿼리의 경우 형식이 다양하므로 특정 형식을 확신하지 않는 한 시간 변환 함수 사용을 피하세요.\n"
         
-        exploration_prompt += "When generating SQLs, be aware of quotation matching: 'Vegetarian\"; You sometimes match \' with \" which may cause an error.\n"
+        exploration_prompt += "SQL을 생성할 때 따옴표 매칭에 주의하세요: 'Vegetarian\"; '와 \"를 매치하는 경우가 있어 오류가 발생할 수 있습니다.\n"
 
-        exploration_prompt += f"You can only use tables in {table_struct}"
+        exploration_prompt += f"{table_struct}에 있는 테이블만 사용할 수 있습니다."
         
         exploration_prompt += self.get_prompt_knowledge()
 
         return exploration_prompt
 
     def get_exploration_refine_prompt(self, sql, corrected_sql, sqls):
-        return f"```sql\n{sql}``` is corrected to ```sql\n{corrected_sql}```. Please correct other sqls if they have similar errors. SQLs: {sqls}. For each SQL, answer in ```sql\n--Description: \n``` format.\n"
+        return f"```sql\n{sql}```이 ```sql\n{corrected_sql}```로 수정되었습니다. 유사한 오류가 있는 다른 SQL들을 수정해주세요. SQL들: {sqls}. 각 SQL에 대해 ```sql\n--설명: \n``` 형식으로 답변하세요.\n"
 
     def get_exploration_self_correct_prompt(self, sql, error):
-        return f"Input sql:\n{sql}\nThe error information is:\n" + str(error) + "\nPlease correct it based on previous context and output the thinking process with only one sql query in ```sql\n--Description: \n``` format. Don't just analyze without SQL or output several SQLs.\n"
+        return f"입력 SQL:\n{sql}\n오류 정보:\n" + str(error) + "\n이전 컨텍스트를 바탕으로 수정하고 ```sql\n--설명: \n``` 형식으로 사고 과정과 함께 하나의 SQL 쿼리만 출력하세요. SQL 없이 분석만 하거나 여러 SQL을 출력하지 마세요.\n"
 
     def get_self_refine_prompt(self, table_info, task, pre_info, question, api, format_csv, table_struct, omnisql_format_pth=None):
         if omnisql_format_pth:
@@ -122,34 +122,31 @@ class Prompts:
             elif task == "BIRD":
                 return table_info
         refine_prompt = table_info + "\n"
-        # refine_prompt += "Begin Exploring Related Columns\n" + response_pre_txt + "\nRefined SQLs and results:\n" + pre_info + "End Exploring Related Columns\n" if pre_info else ""
-        refine_prompt += "Some few-shot examples after column exploration may be helpful:\n" + pre_info if pre_info else ""
+        refine_prompt += "컬럼 탐색 후 몇 가지 few-shot 예시가 도움이 될 수 있습니다:\n" + pre_info if pre_info else ""
 
-        refine_prompt += "Task: " + question + "\n"+f'\nPlease think step by step and answer only one complete SQL in {api} dialect in ```sql``` format.\n'
-        refine_prompt += f'SQL usage example: {self.get_prompt_dialect_basic(api)}\n'
-        refine_prompt += f"Follow the answer format like: {format_csv}.\n" if format_csv else ""
-        refine_prompt += "Here are some useful tips for answering:\n"
+        refine_prompt += "작업: " + question + "\n"+f'\n단계별로 생각하고 ```sql``` 형식으로 {api} 방언의 완전한 SQL 하나만 답변하세요.\n'
+        refine_prompt += f'SQL 사용 예시: {self.get_prompt_dialect_basic(api)}\n'
+        refine_prompt += f"다음과 같은 답변 형식을 따르세요: {format_csv}.\n" if format_csv else ""
+        refine_prompt += "답변을 위한 유용한 팁들:\n"
         
         refine_prompt += self.get_prompt_dialect_list_all_tables(table_struct, api)
-        # refine_prompt += self.get_prompt_fuzzy_query()
 
         if api == "snowflake":
-            refine_prompt += "When using ORDER BY xxx DESC, add NULLS LAST to exclude null records: ORDER BY xxx DESC NULLS LAST.\n"
-        # refine_prompt += "When using ORDER BY, if there are duplicate values in the primary sort column, sort by an additional column as a secondary criterion.\n"
+            refine_prompt += "ORDER BY xxx DESC를 사용할 때 null 레코드를 제외하기 위해 NULLS LAST를 추가하세요: ORDER BY xxx DESC NULLS LAST.\n"
         
-        # Specific:
-        refine_prompt += "When asked something without stating name or id, return both of them. e.g. Which products ...? The answer should include product_name and product_id.\n"
-        refine_prompt += "When asked percentage decrease, you should return a positive value. e.g. How many percentage points in 2021 decrease compared to ...? The answer should be a positive value indicating the decresed number. Try to use ABS().\n"
-        refine_prompt += "If asked two tables, you should reply with the last one instead of combining two tables. e.g. Identifying the top five states ... examine the state that ranks fourth overall and identify its top five counties. You should only answer top five counties.\n"
+        # 특정 지침들:
+        refine_prompt += "이름이나 ID를 명시하지 않고 질문할 때는 둘 다 반환하세요. 예: 어떤 제품들이 ...? 답변에는 product_name과 product_id가 포함되어야 합니다.\n"
+        refine_prompt += "백분율 감소를 묻는 경우 양수 값을 반환해야 합니다. 예: 2021년에 ...와 비교해 몇 퍼센트 포인트 감소했나요? 답변은 감소한 수를 나타내는 양수 값이어야 합니다. ABS()를 사용해보세요.\n"
+        refine_prompt += "두 테이블을 묻는 경우 두 테이블을 결합하는 대신 마지막 것으로 답변해야 합니다. 예: 상위 5개 주를 식별하고 ... 전체 4위인 주를 검토하고 그 주의 상위 5개 카운티를 식별하세요. 상위 5개 카운티만 답변해야 합니다.\n"
         if api == "snowflake":
-            refine_prompt += "Use ST_DISTANCE to calculate distance between two geographic points for more accurate answer.\n"
+            refine_prompt += "더 정확한 답변을 위해 두 지리적 지점 간의 거리를 계산할 때 ST_DISTANCE를 사용하세요.\n"
         refine_prompt += self.get_prompt_decimal_places()
         
         return refine_prompt
 
     def get_self_consistency_prompt(self, task, format_csv):
-        self_consistency_prompt = f"Please check the answer again by reviewing task:\n {task}\n, reviewing Relevant Tables and Columns and Possible Conditions and then give the final SQL query. Don't output other queries. If you think the answer is right, just output the current SQL.\n" 
+        self_consistency_prompt = f"작업을 다시 검토하여 답변을 확인해주세요:\n {task}\n, 관련 테이블과 컬럼 및 가능한 조건들을 검토한 후 최종 SQL 쿼리를 제공하세요. 다른 쿼리는 출력하지 마세요. 답변이 맞다고 생각하면 현재 SQL을 그대로 출력하세요.\n" 
         self_consistency_prompt += self.get_prompt_decimal_places()
-        self_consistency_prompt += f"The answer format should be like: {format_csv}\n" if format_csv else ""
+        self_consistency_prompt += f"답변 형식은 다음과 같아야 합니다: {format_csv}\n" if format_csv else ""
 
         return self_consistency_prompt
