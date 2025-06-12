@@ -119,7 +119,7 @@ def make_folder(args):
     - After: examples_snow/sf_bq070/IDC/bigquery-public-data/idc_v18/dicom_all.json
     '''
 
-    print("Make folders for some examples.")
+    print("일부 예시들의 폴더를 생성합니다.")
     example_folder = args.example_folder
     for entry in tqdm(os.listdir(example_folder)):
         entry1_path = os.path.join(example_folder, entry)
@@ -207,7 +207,7 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
         ... )
         # examples_snow/ 내 모든 예제를 처리하고 prompts.txt 파일들을 생성합니다
     """
-    print("Compress DDL files.")
+    print("DDL 파일들을 압축합니다.")
     for entry in tqdm(os.listdir(example_folder)): # 각 example 폴더 순회
         external_knowledge = None
         prompts = ''
@@ -222,7 +222,7 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                         gold_table_names = set([i.upper() for i in ex["gold_tables"]])
                 if gold_table_names is None or entry in WRONG_GOLD_TABLES:
                     shutil.rmtree(os.path.join(args.example_folder, entry))
-                    print("Miss gold table", entry)
+                    print("골드 테이블 누락", entry)
                     continue
             elif use_gold_schema:
                 if entry in SKIP_GOLD_SQLS:
@@ -291,7 +291,7 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                                                 with open(os.path.join(db_name_path, db_name+'.'+table_name_list[i]+".json")) as f:
                                                     table_json = json.load(f)
                                         else:
-                                            # print(entry, f"No table: {os.path.join(db_name_path, table_name_list[i])}")
+                                            print(f"{entry} 설명 불일치 {table_name_list[i]}")
                                             continue
 
                                         if use_gold_table:
@@ -301,7 +301,7 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                                             if table_json["table_fullname"].upper() not in gold_table_names and not representatives:
                                                 continue
                                         
-                                        prompts += "Table full name: " + table_json["table_fullname"] + "\n"
+                                        prompts += "테이블 전체명: " + table_json["table_fullname"] + "\n"
                                         
                                         project_name_, db_name_, table_name_ = table_json["table_fullname"].split(".")
                                         table_dict.setdefault(project_name_, {}).setdefault(db_name_, [])
@@ -325,20 +325,20 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                                             table_des = ''
                                             if add_description: # --add_description 플래그 사용 시
                                                 if j < len(table_json["description"]):
-                                                    table_des = " Description: " + str(table_json["description"][j]) if table_json["description"][j] else ""
+                                                    table_des = " 설명: " + str(table_json["description"][j]) if table_json["description"][j] else ""
                                                 elif table_json[f"column_names"][j] != "_PARTITIONTIME":
-                                                    print(f"{entry} description unmatch {table_name_list[i]}")
+                                                    print(f"{entry} 설명 불일치 {table_name_list[i]}")
 
                                             if reduce_col and ddl_sl_flag:
 
                                                 if table_json[f"{column_prefix}names"][j] in col_names:
                                                     # print("Name matched", entry)
-                                                    prompts += "Column name: " + table_json[f"{column_prefix}names"][j] + " Type: " + table_json[f"{column_prefix}types"][j] + table_des +"\n"
+                                                    prompts += "컬럼명: " + table_json[f"{column_prefix}names"][j] + " 타입: " + table_json[f"{column_prefix}types"][j] + table_des +"\n"
                                             elif use_gold_schema:
                                                 if table_json[f"{column_prefix}names"][j].upper() in gold_column_names:
-                                                    prompts += "Column name: " + table_json[f"{column_prefix}names"][j] + " Type: " + table_json[f"{column_prefix}types"][j] + table_des +"\n"
+                                                    prompts += "컬럼명: " + table_json[f"{column_prefix}names"][j] + " 타입: " + table_json[f"{column_prefix}types"][j] + table_des +"\n"
                                             else:
-                                                prompts += "Column name: " + table_json[f"{column_prefix}names"][j] + " Type: " + table_json[f"{column_prefix}types"][j] + table_des +"\n"
+                                                prompts += "컬럼명: " + table_json[f"{column_prefix}names"][j] + " 타입: " + table_json[f"{column_prefix}types"][j] + table_des +"\n"
                                         
                                         # 샘플 데이터 추가
                                         if add_sample_rows: # --add_sample_rows 플래그 사용 시
@@ -357,13 +357,13 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                                             else:
                                                 sample_rows = table_json["sample_rows"]
                                             sample_rows = clear_byte(sample_rows)
-                                            prompts += "Sample rows:\n" + str(sample_rows) + "\n"
+                                            prompts += "샘플 데이터:\n" + str(sample_rows) + "\n"
                                         table_dict[project_name_][db_name_] += [table_name_list[i]]
                                         if representatives is not None:
                                             if remove_digits(table_name_list[i]) in representatives:
                                                 if len(representatives[remove_digits(table_name_list[i])]) > 1:
                                                     assert len(representatives[remove_digits(table_name_list[i])]) >= 10, representatives[remove_digits(table_name_list[i])]
-                                                    prompts += f"Some other tables have the similar structure: {representatives[remove_digits(table_name_list[i])]}\n"
+                                                    prompts += f"유사한 구조를 가진 다른 테이블들: {representatives[remove_digits(table_name_list[i])]}\n"
                                                     table_dict[project_name_][db_name_] += representatives[remove_digits(table_name_list[i])]
                                         prompts += "\n" + "-" * 50 + "\n"
                                 elif schema_name == "json":
@@ -384,7 +384,7 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                     for eg in sl_res:
                         if eg["instance_id"] == entry:
                             sl_info = eg
-                            external_knowledge = "Retrieved columns and values: " + str(sl_info['L_values']) if sl_info['L_values'] else ""
+                            external_knowledge = "검색된 컬럼과 값들: " + str(sl_info['L_values']) if sl_info['L_values'] else ""
                 table_names, prompts = get_sqlite_data(sqlite_path, entry, add_description=add_description, add_sample_rows=add_sample_rows, gold_table_names=gold_table_names, gold_column_names=gold_column_names)
             with open(os.path.join(entry1_path, "prompts.txt"), "w") as f:
                 # 200KB 임계값을 초과하는 프롬프트는 자동으로 압축
@@ -398,11 +398,11 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                     prompts = clear_description(prompts)
                     # print(f"description cleared len: {len(prompts)}")
 
-                prompts += f"External knowledge that might be helpful: \n{external_knowledge}\n" # 여기서 Documents 정보 추가
+                prompts += f"도움이 될 수 있는 외부 지식: \n{external_knowledge}\n" # 여기서 Documents 정보 추가
                 if not entry.startswith("local"):
-                    prompts += "The table structure information is ({database name: {schema name: [table name]}}): \n" + str(table_dict) + "\n"
+                    prompts += "테이블 구조 정보 ({데이터베이스명: {스키마명: [테이블명]}}): \n" + str(table_dict) + "\n"
                 else:
-                    prompts += "The table structure information is (table names): \n" + str(table_names) + "\n"
+                    prompts += "테이블 구조 정보 (테이블명들): \n" + str(table_names) + "\n"
                 f.writelines(prompts) # 최종 프롬프트 저장
 
 # 쓸 일 없을 것으로 보임
@@ -444,7 +444,7 @@ def get_sqlite_data(path, entry, add_description=False, add_sample_rows=False, g
             table_json["column_types"] = column_types
 
         if not table_json["column_names"]:
-            print(entry, table_name, gold_table_names, gold_column_names)
+            print(f"{entry} 설명 불일치 {table_name} {gold_table_names} {gold_column_names}")
 
         sample_rows = []
         if add_sample_rows:
@@ -459,12 +459,12 @@ def get_sqlite_data(path, entry, add_description=False, add_sample_rows=False, g
         table_json["sample_rows"] = str(sample_rows)
 
         prompts += "\n" + "-" * 50 + "\n"
-        prompts += "Table full name: " + table_json["table_fullname"] + "\n"
+        prompts += "테이블 전체명: " + table_json["table_fullname"] + "\n"
         for j in range(len(table_json["column_names"])):
             table_des = ''
-            prompts += "Column name: " + table_json["column_names"][j] + " Type: " + table_json["column_types"][j] + table_des + "\n"
+            prompts += "컬럼명: " + table_json["column_names"][j] + " 타입: " + table_json["column_types"][j] + table_des + "\n"
         if add_sample_rows:
-            prompts += "Sample rows:\n" + table_json["sample_rows"] + "\n"
+            prompts += "샘플 데이터:\n" + table_json["sample_rows"] + "\n"
     connection.close()
     return table_names, prompts
 
