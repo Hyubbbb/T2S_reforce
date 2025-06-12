@@ -9,6 +9,7 @@ import threading, concurrent
 from sql import SqlEnv
 import time
 import json
+import re
 
 def execute(question, table_info, args, csv_save_path, log_save_path, sql_save_path, search_directory, format_csv, sql_data):
     db_id = None

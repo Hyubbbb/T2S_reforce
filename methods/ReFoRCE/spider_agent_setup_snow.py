@@ -36,9 +36,9 @@ def setup_snowflake():
             os.remove(target_credential_path)
 
         shutil.copy(credential_path, target_credential_path)
-        print(f"Copied Snowflake credential for instance {instance_id}.")
+        print(f"인스턴스 {instance_id}에 대한 Snowflake 자격 증명을 복사했습니다.")
     
-    print("Finished Snowflake setup...")
+    print("Snowflake 설정 완료...")
 
 
 
@@ -96,9 +96,9 @@ def add_snowflake_agent_setting():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Setup for Spider 2.0")
-    parser.add_argument("--snowflake", action="store_true", help="Setup Snowflake")
-    parser.add_argument("--add_schema", action="store_true", help="Add schema")
+    parser = argparse.ArgumentParser(description="Spider 2.0용 설정")
+    parser.add_argument("--snowflake", action="store_true", help="Snowflake 설정")
+    parser.add_argument("--add_schema", action="store_true", help="스키마 추가")
     parser.add_argument('--example_folder', type=str, default="examples_snow")
 
     args = parser.parse_args()
