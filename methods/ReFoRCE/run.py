@@ -27,7 +27,7 @@ def execute(question, table_info, args, csv_save_path, log_save_path, sql_save_p
         if os.path.exists(os.path.join(search_directory, sql_save_path)):
             return
         else:
-            print(f"Rerun: {search_directory}")
+            print(f"재실행: {search_directory}")
     # if log.log exists, pass
     elif os.path.exists(os.path.join(search_directory, log_save_path)):
         return
@@ -41,7 +41,7 @@ def execute(question, table_info, args, csv_save_path, log_save_path, sql_save_p
     log_file_path = os.path.join(search_directory, log_save_path)
     logger = initialize_logger(log_file_path)
     if format_csv:
-        logger.info("[Answer format]\n" + format_csv + "\n[Answer format]")
+        logger.info("[답변 형식]\n" + format_csv + "\n[답변 형식]")
     table_struct = table_info[table_info.find("The table structure information is "):]
 
     # 2. GPT 채팅 세션 초기화
@@ -61,9 +61,9 @@ def execute(question, table_info, args, csv_save_path, log_save_path, sql_save_p
     if args.do_column_exploration:
         pre_info, response_pre_txt, max_try = agent.exploration(question, table_struct, table_info, logger)
         if max_try <= 0:
-            print(f"{sql_data+'/'+log_save_path} Inadequate preparation, skip")
+            print(f"{sql_data+'/'+log_save_path} 준비 부족, 건너뜀")
             return
-        print(f"{sql_data+'/'+log_save_path}: chat_session_ex len: {chat_session_ex.get_message_len()}")
+        print(f"{sql_data+'/'+log_save_path}: 채팅 세션 길이: {chat_session_ex.get_message_len()}")
 
     csv_save_path = os.path.join(search_directory, csv_save_path)
     sql_save_path = os.path.join(search_directory, sql_save_path)
@@ -82,7 +82,7 @@ def main(args):
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.num_workers) as executor:
         list(executor.map(process_sql_data, dictionaries))
 
-    print("Finished")
+    print("완료되었습니다")
 
 def process_sql_data(sql_data): # sql_data = "sf_bq070"
     """
@@ -142,7 +142,7 @@ def process_sql_data(sql_data): # sql_data = "sf_bq070"
     # Get table information
     table_info = get_table_info(args.db_path, sql_data, agent_format.api, clear_des=True, full_tb_info=full_tb_info)
     if len(table_info) > 300000:
-        print(f"Table info len: {len(table_info)}, return")
+        print(f"테이블 정보 길이: {len(table_info)}, 반환")
 
     if args.do_format_restriction:
         if args.use_gold_format:
@@ -190,17 +190,17 @@ def process_sql_data(sql_data): # sql_data = "sf_bq070"
         if args.revote:
             print(search_directory)
             if "result.sql" in os.listdir(search_directory):
-                print("Revote, remove", os.path.join(search_directory, "result.sql"))
+                print("재투표, 제거됨", os.path.join(search_directory, "result.sql"))
                 os.remove(os.path.join(search_directory, "result.sql"))
             if "result.csv" in os.listdir(search_directory):
-                print("Revote, remove", os.path.join(search_directory, "result.csv"))
+                print("재투표, 제거됨", os.path.join(search_directory, "result.csv"))
                 os.remove(os.path.join(search_directory, "result.csv"))
         if "result.sql" not in os.listdir(search_directory):
             if any(file.endswith('.sql') for file in os.listdir(search_directory) if os.path.isfile(os.path.join(search_directory, file))):
                 # After all processes have completed, perform the vote result
                 agent_format.vote_result(search_directory, args, sql_paths, table_info, question)
             else:
-                print(f"{sql_data}: Empty")
+                print(f"{sql_data}: 비어있음")
     else:
         # Directly execute the task
         execute(
@@ -209,7 +209,7 @@ def process_sql_data(sql_data): # sql_data = "sf_bq070"
             search_directory, format_csv, sql_data
         )
 
-    print(f"Time for {sql_data}: {int((time.time() - start_time) // 60)} min")
+    print(f"{sql_data} 처리 시간: {int((time.time() - start_time) // 60)}분")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
