@@ -242,8 +242,7 @@ class REFORCE:
             while max_try > 0:
                 response = self.chat_session.get_model_response(self_refine_prompt, "sql")
                 if not isinstance(response, list) or len(response) != 1:
-                    self_refine_prompt = "SQL을 하나만 출력하세요."
-                    
+                    self_refine_prompt = "Please output one SQL only."
                 else:
                     break
                 max_try -= 1
@@ -293,7 +292,7 @@ class REFORCE:
                 df_csv_str = df_csv.astype(str)
                 if get_values_from_table(csv_data_str_round2) not in results_values:
                     if nested_val:
-                        self_consistency_prompt += f"값 {nested_val}이 중첩되어 있습니다. 수정해주세요. 예: '[\nA,\n B\n]'를 'A, B'로 변환.\n"
+                        self_consistency_prompt += f"Values {nested_val} are nested. Please correct them. e.g. Transfer '[\nA,\n B\n]' to 'A, B'.\n"
                     elif not ((df_csv_str == "0") | (df_csv_str == "")).all().any():
                             results_values.append(get_values_from_table(csv_data_str_round2))
                             results_tables.append(csv_data_str)
@@ -314,7 +313,7 @@ class REFORCE:
                 self_refine_prompt = self_consistency_prompt
             
             else:
-                self_refine_prompt = f"입력 SQL:\n{response}\n오류 정보:\n" + str(executed_result) + "\n수정하여 완전한 SQL 쿼리 1개만 출력하세요."
+                self_refine_prompt = f"Input sql:\n{response}\nThe error information is:\n" + str(executed_result) + "\nPlease correct it and output only 1 complete SQL query."
 
             itercount += 1
 
@@ -353,7 +352,7 @@ class REFORCE:
         max_dict = {k: v for k, v in result.items() if v == max_value}
         # print(max_dict)
 
-        prompt = f"DB 정보, 작업 및 후보 SQL들과 그 결과가 제공됩니다. 데이터베이스 정보를 바탕으로 가장 올바른 것을 선택해주세요:\n{table_info}. 작업: {task}. 다음은 후보 SQL들과 답변들입니다: \n"
+        prompt = f"You are gieven DB info, task and candidate SQLs and thier results. You should choose the most correct one based on database info:\n{table_info}. The task is: {task}. Here are some candidate sqls and answers: \n"
         for sql, counts in max_dict.items():
             sql_path = os.path.join(search_directory, sql)
             csv_path = os.path.join(search_directory, sql_paths[sql])

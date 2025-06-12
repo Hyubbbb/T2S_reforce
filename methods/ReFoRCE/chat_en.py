@@ -65,7 +65,7 @@ class GPTChat:
             self.messages.append({"role": "assistant", "content": main_content})
             if not sql_query:
                 print(f"sql_query: {sql_query}, max_try: {max_try}")
-                self.messages.append({"role": "user", "content": f"하나의 SQL 쿼리와 함께 ```{code_format}``` 형식으로 답해주세요."})
+                self.messages.append({"role": "user", "content": f"Please answer in ```{code_format}``` format with one sql query."})
                 continue
                 
         return sql_query

@@ -137,20 +137,20 @@ def reduce_ddl(example_path, dictionaries, linked_json, reduce_col=False):
     compress_ddl(example_path, add_description=True, add_sample_rows=True, rm_digits=True, schema_linked=True, clear_long_eg_des=True, reduce_col=reduce_col)
 
 ask_prompt = """
-테이블 수준 스키마 링킹을 수행하고 있습니다. 스키마 정보가 있는 테이블과 작업이 주어졌을 때, 단계별로 생각하여 이 테이블이 작업과 관련이 있는지 결정해야 합니다.
-Y/N으로만 답해야 합니다. 답이 Y인 경우, 관련 있다고 생각하는 컬럼들을 파이썬 리스트 형식으로 추가해야 합니다.
+You are doing table level schema linking. Given a table with schema information and the task, you should think step by step and decide whether this table is related to the task. 
+You should answer Y/N only. If the answer is Y, you should add columns that you think is related in python list format.
 
-다음과 같은 json 코드 블록으로만 답해주세요:
+Please answer only in json code block like:
 ```json
 {{
-    "think": "결정하기 위해 단계별로 생각",
-    "answer": "Y 또는 N만",
+    "think": "think step by step to decide",
+    "answer": "Y or N only",
     "columns": [col_name1, col_name2]
 }}
 ```
 
-테이블 정보: {0}
-작업: {1}
+Table info: {0}
+Task: {1}
 {2}
 """
 
