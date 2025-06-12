@@ -243,6 +243,7 @@ class REFORCE:
                 response = self.chat_session.get_model_response(self_refine_prompt, "sql")
                 if not isinstance(response, list) or len(response) != 1:
                     self_refine_prompt = "Please output one SQL only."
+                    
                 else:
                     break
                 max_try -= 1
