@@ -1,23 +1,201 @@
-# credentials
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.env
+.venv/
+env.bak/
+venv.bak/
+.conda/
+conda-meta/
+
+# IDE - VSCode
+.vscode/
+*.code-workspace
+.history/
+
+# IDE - PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea_modules/
+
+# IDE - Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+*.ipynb_metadata/
+
+# Credentials & Secrets
+*credential*.json
+*_credential.json
 **/snowflake_credential.json
 **/bigquery_credential.json
+*.key
+*.pem
+.env
+.env.local
+.env.production
+credentials/
+**/credentials/
 
-# DB
+# API Keys
+*api_key*
+*API_KEY*
+openai_key*
+azure_key*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.duckdb
 spider2-lite/resource/databases/spider2-localdb
 data/BIRD/dev_databases
 spider2-lite/resource/local_sqlite.zip
 
-# output log
+# Logs & Output
+*.log
+logs/
+output/
+results/
+experiments/
 spider2-snow/evaluation_suite/log.txt
-
-# example_folder
-methods/ReFoRCE/examples*
-
-# cache
-**/__pycache__
-
-# output folder
 methods/ReFoRCE/output/
 
-# vscode
-.vscode/
+# Cache & Temporary
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.pytest_cache/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Large Data Files
+*.csv
+*.json
+*.parquet
+*.pickle
+*.pkl
+data/
+datasets/
+raw_data/
+
+# Model Files
+*.model
+*.pt
+*.pth
+*.h5
+*.joblib
+*.bin
+*.onnx
+*.tflite
+*.pb
+*.hdf5
+
+# Project Specific
+methods/ReFoRCE/examples*
+spider2-dbt/evaluation_suite/*
+spider2-dbt/release_spider2/spider2c.jsonl
+spider2-dbt/evaluation_suite/gold/spider2c_eval.jsonl
+spider2-dbt/evaluation_suite/gold/**/*.duckdb
+spider2-dbt/delete.py
+get_doc.py
+get_bigquery_schema.py
+
+# Exceptions - Files to keep
+!spider2-dbt/resource/databases/local/local-map.jsonl
+!spider2-dbt/evaluation_suite/README.md
+!spider2-dbt/evaluation_suite/evaluate.py
+!spider2-dbt/evaluation_suite/evaluate_beta.py
+!spider2-dbt/evaluation_suite/gold/
+!spider2-dbt/evaluation_suite/gold_temp/
+!spider2-dbt/evaluation_suite/eval_utils.py
+!spider2-dbt/evaluation_suite/example_submission_folder/
+!spider2-lite/evaluation_suite/README.md
+!spider2-lite/evaluation_suite/gold/
+!spider2-lite/evaluation_suite/gold-1108/
+!spider2-lite/evaluation_suite/gold-1104/
+!spider2-lite/evaluation_suite/gold/sql/bq001.sql
+!spider2-lite/evaluation_suite/gold/sql/bq002.sql
+!spider2-lite/evaluation_suite/gold/spider2lite_eval.jsonl
+!spider2-lite/evaluation_suite/evaluate.py
+!spider2-lite/evaluation_suite/evaluate_yx.py
+!spider2-lite/evaluation_suite/evaluate_utils.py
+!spider2-lite/evaluation_suite/spider2sql_eval_config_file.py
+!spider2-lite/evaluation_suite/example_submission_folder/
+!methods/spider-agent-lite/bigquery_credential.json
+!methods/spider-agent-lite/snowflake_credential.json
+!spider2-lite/evaluation_suite/example_submission_folder_csv
+
+# Baseline specific
+spider2-lite/baselines/dailsql/third_party/
+spider2-lite/baselines/dailsql/vector_cache/
+spider2-lite/baselines/dailsql/preprocessed_data/*
+!spider2-lite/baselines/dailsql/preprocessed_data/spider2_preprocess.py
+spider2-lite/baselines/dailsql/postprocessed_data/*
+!spider2-lite/baselines/dailsql/postprocessed_data/spider2_postprocess.py
+
+spider2-lite/baselines/codes/sic_ckpts/
+spider2-lite/baselines/codes/SimCSE/
+spider2-lite/baselines/codes/preprocessed_data/*
+!spider2-lite/baselines/codes/preprocessed_data/spider2_preprocess.py
+spider2-lite/baselines/codes/postprocessed_data/*
+!spider2-lite/baselines/codes/postprocessed_data/spider2_postprocess.py
+
+spider2-lite/baselines/dinsql/preprocessed_data/*
+!spider2-lite/baselines/dinsql/preprocessed_data/spider2_preprocess.py
+spider2-lite/baselines/dinsql/postprocessed_data/*
+!spider2-lite/baselines/dinsql/postprocessed_data/spider2_postprocess.py
+
+# Temporary development files
+**/toy*.json
+**/yyx_run.sh
+**/0825*.json
+**/subset*.json
+**/local*.json
+**/multi_db_40.json
+**/yyx*.sh
+**/yyx*.py
+**/yyx*.json
+**/run_check.sh
+**/sitecustomize.py
