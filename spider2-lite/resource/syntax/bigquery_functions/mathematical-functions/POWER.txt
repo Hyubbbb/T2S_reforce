@@ -1,7 +1,0 @@
-## POWER
-
-POWER(X, Y)
-
-**Description**
-
-Synonym of  ` POW(X, Y) ` .
