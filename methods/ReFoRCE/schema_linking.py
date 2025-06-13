@@ -10,7 +10,13 @@ import argparse
 import sys
 import re
 import numpy as np
-csv.field_size_limit(sys.maxsize)
+
+# Windows 환경에서 오류 발생 시 32비트 시스템 최대값으로 설정
+try:
+    csv.field_size_limit(sys.maxsize)
+except OverflowError:
+    csv.field_size_limit(2147483647)  # 32비트 시스템 최대값
+    
 THRESHOLD = 200000
 DEPS_DEV_V1 = ["sf_bq016", "sf_bq062", "sf_bq063", "sf_bq028"]
 
@@ -104,7 +110,7 @@ def reduce_ddl(example_path, dictionaries, linked_json, reduce_col=False):
 
                     json_pth = ddl_path.replace("DDL.csv", row[0].strip()+".json")
                     if os.path.exists(json_pth):
-                        with open(json_pth) as f:
+                        with open(json_pth, encoding="utf-8") as f:
                             table_fullname = json.load(f)["table_fullname"]
                     else:
                         print(f"{ex_id}: {json_pth} doesn't exist")
@@ -134,7 +140,8 @@ def reduce_ddl(example_path, dictionaries, linked_json, reduce_col=False):
             print(f"{eg_id}: All empty DDL_sl.csv, remove, table_names", table_names)
             for i in temp_file_paths:
                 os.remove(i)
-    compress_ddl(example_path, add_description=True, add_sample_rows=True, rm_digits=True, schema_linked=True, clear_long_eg_des=True, reduce_col=reduce_col)
+    compress_ddl(example_path, add_description=True, add_sample_rows=False, rm_digits=True, schema_linked=True, clear_long_eg_des=True, reduce_col=reduce_col)
+    # compress_ddl(example_path, add_description=True, add_sample_rows=True, rm_digits=True, schema_linked=True, clear_long_eg_des=True, reduce_col=reduce_col)
 
 ask_prompt = """
 테이블 수준 스키마 링킹을 수행하고 있습니다. 스키마 정보가 있는 테이블과 작업이 주어졌을 때, 단계별로 생각하여 이 테이블이 작업과 관련이 있는지 결정해야 합니다.
@@ -172,11 +179,11 @@ def ask_model_sl(example_path, json_save_pth):
         
         tb_info_pth = search_file(os.path.join(example_path, ex_id), "prompts.txt") # 프롬프트 파일 경로 찾기
         assert len(tb_info_pth) == 1
-        with open(tb_info_pth[0]) as f:
+        with open(tb_info_pth[0], encoding="utf-8") as f:
             tb_info = f.read()
 
         task = task_dict[ex_id]
-        chat_session = GPTChat(azure=True, model="gpt-4o-rag-research", temperature=0)
+        chat_session = GPTChat(azure=False, model="gpt-4o", temperature=0)
         result = ask_model_sl_(tb_info, task, chat_session)
         return ex_id, result
 
@@ -192,8 +199,8 @@ def ask_model_sl(example_path, json_save_pth):
             if ex_id is not None: # 예외 처리
                 linked_dic[ex_id] = result
 
-        with open(json_save_pth, "w") as f:
-            json.dump(linked_dic, f, indent=4)
+        with open(json_save_pth, "w", encoding="utf-8") as f:
+            json.dump(linked_dic, f, indent=4, ensure_ascii=False)
 
 def ask_model_sl_(tb_info, task, chat_session): # sl: schema linking
     # GPT 모델을 사용하여 각 테이블이 질문과 관련있는지 판단
@@ -227,7 +234,7 @@ def ask_model_sl_(tb_info, task, chat_session): # sl: schema linking
     return linked
 
 def compute_metrics_sl(file_pth, db_path):
-    with open(file_pth) as f:
+    with open(file_pth, encoding="utf-8") as f:
         data = json.load(f)
     count = 0
     precision_all = []
@@ -270,12 +277,37 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     dictionaries, task_dict = get_dictionary(args.db_path, args.task)
+    
+    # 스키마 링킹 수행 (linked_json_pth가 존재하지 않을 때만)
     if args.linked_json_pth is not None and not os.path.exists(args.linked_json_pth):
-        gold_tb = args.gold_tb_pth
-        with open(gold_tb) as f:
-            gold = [json.loads(i) for i in f]
+        gold = []  # 기본값으로 빈 리스트 설정
+        
+        # 골드 테이블 파일이 제공되고 존재하는 경우에만 로드
+        if args.gold_tb_pth is not None and os.path.exists(args.gold_tb_pth):
+            try:
+                with open(args.gold_tb_pth, encoding="utf-8") as f:
+                    gold = [json.loads(i) for i in f]
+                print(f"골드 테이블 로드 완료: {len(gold)}개 인스턴스")
+            except Exception as e:
+                print(f"골드 테이블 로드 실패: {e}")
+                print("골드 테이블 없이 진행합니다.")
+                gold = []
+        else:
+            if args.gold_tb_pth is None:
+                print("골드 테이블 경로가 제공되지 않았습니다. 골드 테이블 없이 진행합니다.")
+            else:
+                print(f"골드 테이블 파일이 존재하지 않습니다: {args.gold_tb_pth}")
+                print("골드 테이블 없이 진행합니다.")
 
+        # 스키마 링킹 수행
         ask_model_sl(args.db_path, args.linked_json_pth)
 
-        compute_metrics_sl(args.linked_json_pth, args.db_path)
+        # 골드 데이터가 있을 때만 메트릭 계산
+        if gold:
+            print("골드 테이블을 사용하여 스키마 링킹 성능을 평가합니다.")
+            compute_metrics_sl(args.linked_json_pth, args.db_path)
+        else:
+            print("골드 테이블이 없어 성능 평가를 생략합니다.")
+    
+    # DDL 축소 수행 (항상 실행)
     reduce_ddl(args.db_path, dictionaries, args.linked_json_pth, args.reduce_col)

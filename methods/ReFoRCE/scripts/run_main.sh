@@ -44,10 +44,10 @@ python spider_agent_setup_${TASK}.py --example_folder examples_${TASK}
 python reconstruct_data.py \
     --example_folder examples_${TASK} \
     --add_description \
-    --add_sample_rows \
     --rm_digits \
     --make_folder \
     --clear_long_eg_des
+    # --add_sample_rows \ # 토큰을 너무 잡아 먹어서 주석처리 (0612)
 
 # 3. Prompt.txt 파일 중 200KB 이상인 파일 개수 확인
 echo "Number of prompts.txt files in examples_${TASK} larger than 200KB before reducing: $(find examples_${TASK} -type f -name "prompts.txt" -exec du -b {} + | awk '$1 > 200000' | wc -l)"

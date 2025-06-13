@@ -5,13 +5,9 @@ import zipfile
 import argparse
 
 # 아마 이 부분을 내 DB에 맞게 수정해야 할 것 같음
-# JSONL_PATH = '../../spider2-snow/spider2-snow.jsonl'
-# DATABASE_PATH = '../../spider2-snow/resource/databases/'
-# DOCUMENT_PATH = '../../spider2-snow/resource/documents'
-
-JSONL_PATH = '../../spider2-snow/spider2-snow.jsonl'
-DATABASE_PATH = '../../spider2-snow/resource/databases/'
-DOCUMENT_PATH = '../../spider2-snow/resource/documents'
+JSONL_PATH = '../../spider2-fnf/spider2-fnf.jsonl'
+DATABASE_PATH = '../../spider2-fnf/resource/databases/'
+DOCUMENT_PATH = '../../spider2-fnf/resource/documents'
 
 
 def clear_folder(folder_path):

@@ -9,7 +9,10 @@ from prompt import Prompts
 from typing import Type
 from chat import GPTChat
 import sys
-csv.field_size_limit(sys.maxsize)
+try:
+    csv.field_size_limit(sys.maxsize)
+except OverflowError:
+    csv.field_size_limit(2147483647)  # 32비트 시스템 최대값
 
 class REFORCE:
     def __init__(self, db_path, sql_data, search_directory, prompt_class: Type[Prompts], sql_env: Type[SqlEnv]=None, chat_session_pre: Type[GPTChat]=None, chat_session: Type[GPTChat]=None, log_save_path=None, db_id=None, task=None):
@@ -415,8 +418,16 @@ class REFORCE:
                 if os.path.exists(complete_value):
                     same_ans = 0
                     for v in all_values:
-                        v_df = pd.read_csv(v)
-                        c_df = pd.read_csv(complete_value)
+                        try:
+                            v_df = pd.read_csv(v, encoding='utf-8')
+                            c_df = pd.read_csv(complete_value, encoding='utf-8')
+                        except UnicodeDecodeError:
+                            try:
+                                v_df = pd.read_csv(v, encoding='cp949')
+                                c_df = pd.read_csv(complete_value, encoding='cp949')
+                            except UnicodeDecodeError:
+                                v_df = pd.read_csv(v, encoding='latin-1')
+                                c_df = pd.read_csv(complete_value, encoding='latin-1')
                         if v != complete_value and is_valid_result(v_df) and compare_pandas_table(v_df, c_df, ignore_order=True) and v_df.shape == c_df.shape:
                             same_ans += 1
                             result_name[v] = result_name.get(v, []) + [complete_value]

@@ -214,7 +214,7 @@ def process_sql_data(sql_data): # sql_data = "sf_bq070"
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default="snow", choices=["snow", "lite", "BIRD"],)
+    parser.add_argument('--task', type=str, default="snow", choices=["snow", "lite", "BIRD", "fnf"],)
     parser.add_argument('--subtask', type=str, default=None, choices=["sqlite"])
     parser.add_argument('--db_path', type=str, default=None)
     parser.add_argument('--output_path', type=str, default="output/o3-snow-log")

@@ -285,11 +285,11 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                                     ddl_file.reset_index(drop=True, inplace=True)
                                     for i in range(len(table_name_list)):
                                         if os.path.exists(os.path.join(db_name_path, table_name_list[i]+".json")):                               
-                                            with open(os.path.join(db_name_path, table_name_list[i]+".json")) as f:
+                                            with open(os.path.join(db_name_path, table_name_list[i]+".json"), encoding="utf-8") as f:
                                                 table_json = json.load(f)
                                         elif os.path.exists(os.path.join(db_name_path, db_name+'.'+table_name_list[i]+".json")):
-                                                with open(os.path.join(db_name_path, db_name+'.'+table_name_list[i]+".json")) as f:
-                                                    table_json = json.load(f)
+                                            with open(os.path.join(db_name_path, db_name+'.'+table_name_list[i]+".json"), encoding="utf-8") as f:
+                                                table_json = json.load(f)
                                         else:
                                             print(f"{entry} 설명 불일치 {table_name_list[i]}")
                                             continue
@@ -367,12 +367,12 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                                                     table_dict[project_name_][db_name_] += representatives[remove_digits(table_name_list[i])]
                                         prompts += "\n" + "-" * 50 + "\n"
                                 elif schema_name == "json":
-                                    with open(schema_name_path) as f:
+                                    with open(schema_name_path, encoding="utf-8") as f:
                                         prompts += f.read()
                                         print(f.read())
 
                     elif is_file(project_name_path, "md"): # .md 파일의 외부 지식이 있으면 자동으로 포함
-                        with open(project_name_path) as f:
+                        with open(project_name_path, encoding="utf-8") as f:
                             external_knowledge = f.read() # 외부 지식 파일 읽기
             else:
                 for sqlite in os.listdir(entry1_path):
@@ -386,7 +386,7 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                             sl_info = eg
                             external_knowledge = "검색된 컬럼과 값들: " + str(sl_info['L_values']) if sl_info['L_values'] else ""
                 table_names, prompts = get_sqlite_data(sqlite_path, entry, add_description=add_description, add_sample_rows=add_sample_rows, gold_table_names=gold_table_names, gold_column_names=gold_column_names)
-            with open(os.path.join(entry1_path, "prompts.txt"), "w") as f:
+            with open(os.path.join(entry1_path, "prompts.txt"), "w", encoding="utf-8") as f:
                 # 200KB 임계값을 초과하는 프롬프트는 자동으로 압축
                 if len(prompts) > THRESHOLD:
                     # print(f"{entry} len before clearing sample rows1: {len(prompts)}")

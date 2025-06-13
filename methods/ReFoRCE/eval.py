@@ -10,7 +10,10 @@ from tqdm import tqdm
 from sql import SqlEnv
 from utils import get_api_name, get_db_id, get_sqlite_path
 import sys
-csv.field_size_limit(sys.maxsize)
+try:
+    csv.field_size_limit(sys.maxsize)
+except OverflowError:
+    csv.field_size_limit(2147483647)  # 32비트 시스템 최대값
 
 def load_jsonl_to_dict(jsonl_file):
     data_dict = {}

@@ -157,7 +157,7 @@ def get_table_info(test_path, sql_data, api, clear_des=False, full_tb_info=None)
         for txt in table_info_txt:
             txt_path = search_file(os.path.join(test_path, sql_data), txt)
             for path in txt_path:
-                with open(path) as f:
+                with open(path, encoding="utf-8") as f:
                     table_info += f.read()
         if clear_des:
             if len(table_info) > 200000:
@@ -166,6 +166,8 @@ def get_table_info(test_path, sql_data, api, clear_des=False, full_tb_info=None)
 
 def get_api_name(sql_data):
     if sql_data.startswith("sf"):
+        return "snowflake"
+    elif sql_data.startswith("fnf"):  # FNF 케이스 추가
         return "snowflake"
     elif sql_data.startswith("local"):
         return "sqlite"
@@ -197,7 +199,7 @@ def get_dictionary(db_path, task):
     json_path = os.path.join(db_path, f"spider2-{task}.jsonl")
     # json_path = "../../spider2-lite/spider2-lite.jsonl"
     task_dict = {}
-    with open(json_path) as f:
+    with open(json_path, encoding="utf-8") as f:
         for line in f:
             line_js = json.loads(line)
             if task == "snow":
@@ -207,6 +209,8 @@ def get_dictionary(db_path, task):
                 # task_dict[line_js['instance_id']] = line_js['question']
             elif task == "lite":
                 task_dict[line_js['instance_id']] = line_js['question']
+            elif task == "fnf":  # FNF 태스크 추가
+                task_dict[line_js['instance_id']] = line_js['instruction']
 
     dictionaries = [entry for entry in os.listdir(db_path) if os.path.isdir(os.path.join(db_path, entry))]
     return dictionaries, task_dict
@@ -215,7 +219,7 @@ def get_db_id(db_path, ex_id):
     task = "lite"
     assert ex_id.startswith("local")
     json_path = os.path.join(db_path, f"spider2-{task}.jsonl")
-    with open(json_path) as f:
+    with open(json_path, encoding="utf-8") as f:
         for line in f:
             line_js = json.loads(line)
             if line_js['instance_id'] == ex_id:
