@@ -2,6 +2,10 @@ from openai import OpenAI, AzureOpenAI
 from utils import extract_all_blocks
 import os
 import sys
+from dotenv import load_dotenv
+
+# .env 파일 로드
+load_dotenv()
 
 class GPTChat:
     def __init__(self, azure=False, model="gpt-4o", temperature=1) -> None:
