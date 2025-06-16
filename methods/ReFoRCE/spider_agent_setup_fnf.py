@@ -112,4 +112,3 @@ if __name__ == '__main__':
 
     # 3. DB Schema 추가
     setup_add_schema(args)
-
