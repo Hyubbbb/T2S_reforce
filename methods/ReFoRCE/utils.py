@@ -61,7 +61,7 @@ def initialize_logger(log_path, logger_name=None):
         logger_name = threading.current_thread().name
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
-    file_handler = logging.FileHandler(log_path, mode='w')
+    file_handler = logging.FileHandler(log_path, mode='w', encoding='utf-8')
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s', 
         datefmt='%Y-%m-%d %H:%M:%S'
@@ -272,6 +272,15 @@ def get_sqlite_path(db_path="", sql_data=None, db_id=None, task=None):
     return sqlite_path
 
 def split_sql_safe(sql: str):
+    """
+    문자열에 여러 개의 SQL이 있을 경우, 이를 개별 SQL 문으로 분리하는 함수
+
+    Examples:
+        - Input:
+            "SELECT * FROM users; SELECT * FROM orders;"
+        - Output:
+            ["SELECT * FROM users;", "SELECT * FROM orders;"]
+    """
     statements = []
     current_stmt = []
 
@@ -335,7 +344,8 @@ def get_tb_info(text):
     tb = []
     for i in text.split("-"*50):
         i = i.strip()
-        if i.startswith("Table full name:"):
+        # 영어와 한글 모두 지원
+        if i.startswith("Table full name:") or i.startswith("테이블 전체명:"):
             tb.append(i)
     return tb
 

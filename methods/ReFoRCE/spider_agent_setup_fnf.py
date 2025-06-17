@@ -139,11 +139,24 @@ def setup_add_schema(args):
         src_folder = os.path.join(DATABASE_PATH, db_id)
         print(f"      📋 스키마 복사: {src_folder} → {dest_folder}")
         try:
-            shutil.copytree(src_folder, dest_folder, dirs_exist_ok=True)
-            
-            # 복사된 파일 개수 확인
-            copied_files = len([f for f in os.listdir(dest_folder) if os.path.isfile(os.path.join(dest_folder, f))])
-            print(f"      ✅ 스키마 복사 완료 ({copied_files}개 파일)")
+            # 소스 폴더의 모든 내용을 목적지 폴더로 복사
+            if os.path.exists(src_folder):
+                for item in os.listdir(src_folder):
+                    src_item = os.path.join(src_folder, item)
+                    dest_item = os.path.join(dest_folder, item)
+                    
+                    if os.path.isdir(src_item):
+                        shutil.copytree(src_item, dest_item, dirs_exist_ok=True)
+                    else:
+                        shutil.copy2(src_item, dest_item)
+                
+                # 복사된 파일 개수 확인 (재귀적으로)
+                copied_files = sum([len(files) for r, d, files in os.walk(dest_folder)])
+                copied_dirs = sum([len(dirs) for r, dirs, f in os.walk(dest_folder)]) - 1  # 루트 제외
+                print(f"      ✅ 스키마 복사 완료 ({copied_files}개 파일, {copied_dirs}개 폴더)")
+            else:
+                print(f"      ❌ 소스 폴더가 존재하지 않음: {src_folder}")
+                error_dbs.append(f"{instance_id}:{db_id}")
         except Exception as e:
             print(f"      ❌ 스키마 복사 실패: {e}")
             error_dbs.append(f"{instance_id}:{db_id}")

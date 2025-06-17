@@ -17,7 +17,8 @@ try:
 except OverflowError:
     csv.field_size_limit(2147483647)  # 32비트 시스템 최대값
     
-THRESHOLD = 200000
+# THRESHOLD = 200000
+THRESHOLD = 50000  # 50KB로 낮춤 (FNF 태스크 고려)
 DEPS_DEV_V1 = ["sf_bq016", "sf_bq062", "sf_bq063", "sf_bq028"]
 
 def reduce_columns(sql: str, subset_columns: set[str]) -> str:
@@ -26,16 +27,37 @@ def reduce_columns(sql: str, subset_columns: set[str]) -> str:
     assert table_match, sql
     table_name = table_match.group(1)
 
-    columns_block_match = re.search(r'\((.*?)\)\s*(PARTITION|CLUSTER|OPTIONS|;|$)', sql, re.DOTALL | re.IGNORECASE)
-    if not columns_block_match:
-        raise ValueError("Cannot extract columns block.")
-    columns_block = columns_block_match.group(1)
+    # 괄호 매칭으로 컬럼 블록 추출 (정규식보다 안정적)
+    start_idx = sql.find('(')
+    if start_idx == -1:
+        raise ValueError("Cannot find opening parenthesis.")
+    
+    # 괄호 매칭으로 끝 찾기
+    paren_count = 0
+    end_idx = start_idx
+    
+    for i, char in enumerate(sql[start_idx:], start_idx):
+        if char == '(':
+            paren_count += 1
+        elif char == ')':
+            paren_count -= 1
+            if paren_count == 0:
+                end_idx = i
+                break
+    
+    if paren_count != 0:
+        raise ValueError("Cannot find matching closing parenthesis.")
+    
+    columns_block = sql[start_idx+1:end_idx]
 
     lines = columns_block.splitlines()
     filtered_lines = []
     for line in lines:
         line = line.strip().rstrip(',')
         if not line:
+            continue
+        # primary key 같은 제약조건은 스킵
+        if line.lower().startswith('primary key') or line.lower().startswith('foreign key') or line.lower().startswith('unique'):
             continue
         parts = line.split()
         if len(parts) < 2:
@@ -75,7 +97,7 @@ def reduce_ddl(example_path, dictionaries, linked_json, reduce_col=False):
             continue
 
         # 2. 스키마 링킹 결과 로드
-        with open(linked_json) as f:
+        with open(linked_json, encoding='utf-8') as f:
             sl = json.load(f)
 
         # 3. 스키마 링킹 결과를 통해, 파싱하여 테이블 이름 추출
@@ -263,13 +285,24 @@ def ask_model_sl_(tb_info, task, chat_session): # sl: schema linking
                 try:
                     data = json.loads(response)
                     assert data["answer"] in ["Y", "N"], 'data["answer"] should be in ["Y", "N"]'
-                    data["table name"] = re.search(r'^Table full name:\s*(.+)$', tb, re.MULTILINE).group(1)
+                    # 영어와 한글 테이블명 모두 지원
+                    table_name_match = re.search(r'^Table full name:\s*(.+)$', tb, re.MULTILINE)
+                    if not table_name_match:
+                        table_name_match = re.search(r'^테이블 전체명:\s*(.+)$', tb, re.MULTILINE)
+                    data["table name"] = table_name_match.group(1)
                     break
                 except Exception as e:
                     input = e+"Please generate again."
             max_try -= 1
         if max_try == 0:
-            print("Failed", re.search(r'^Table full name:\s*(.+)$', tb, re.MULTILINE).group(1))
+            # 영어와 한글 테이블명 모두 지원
+            table_name_match = re.search(r'^Table full name:\s*(.+)$', tb, re.MULTILINE)
+            if not table_name_match:
+                table_name_match = re.search(r'^테이블 전체명:\s*(.+)$', tb, re.MULTILINE)
+            if table_name_match:
+                print("Failed", table_name_match.group(1))
+            else:
+                print("Failed to extract table name from:", tb[:100])
             continue
         # print(data)
         linked.append(data)
