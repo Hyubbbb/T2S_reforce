@@ -45,25 +45,35 @@ class REFORCE:
     def execute_sqls(self, sqls, logger):
         """
         SQL 실행 및 결과 처리 (여러 sql을 순차적으로 실행하고 결과를 처리)
+        - 성공한 경우: 결과를 저장하고 다음으로
+        - 실패한 경우: `self_correct` 함수를 통해 오류 수정 시도
 
         Args:
             sqls: 실행할 SQL 목록
             logger: 로깅 객체
 
         Returns:
-            result_dic_list: 실행 결과 딕셔너리 리스트
+            result_dic_list: { 'sql':..., 'res':... } 형태의 실행 결과 딕셔너리 리스트
         """
+
+        # 1. 초기화
         result_dic_list = []
         error_rec = []
+
+        # 2. 모든 SQL 실행
         while sqls:
+            # 2-1. 10개 이상 실행 시 종료
             if len(result_dic_list) > 10:
                 break
-            result_dic = {}
+            result_dic = {} # 실행 결과 저장
             sql = sqls[0]
-            sqls = sqls[1:]
+            sqls = sqls[1:] # 실행할 SQL 문자열 리스트
             logger.info("[Try to execute]\n" + sql + "\n[Try to execute]")
+
+            # 2-2. SQL 실행
             results = self.sql_env.execute_sql_api(sql, self.sql_id, api=self.api, max_len=self.csv_max_len, sqlite_path=self.sqlite_path)
 
+            # 2-3. 성공 시 결과 저장
             if isinstance(results, str) and results != self.empty_result:
                 result_dic['sql'] = sql
                 result_dic['res'] = results
@@ -71,28 +81,43 @@ class REFORCE:
                 logger.info("[Successfully executed]\n" +  f"Successfully executed. SQL:\n{sql}\nResults:\n{results}" + "\n[Successfully executed]")
                 result_dic_list.append(result_dic)
             else:
+                # 2-4. 실패 시 오류 수정
                 logger.info("[Error occurred]\n" + str(results) + "\n[Error occurred]")
                 max_try = self.max_try
                 simplify = False
                 corrected_sql = None
+
+                # 2-5. 오류 수정 시도
                 while not isinstance(results, str) or results == self.empty_result:
                     error_rec.append(0)
                     if max_try == 0:
                         break
                     if results == self.empty_result:
                         simplify = True
+
+                    # 2-5-1. 오류 수정 시도
                     corrected_sql = self.self_correct(sql, results, logger, simplify=simplify)
-                    if not isinstance(corrected_sql, list) or len(corrected_sql) < 1:
+                    
+                    # 2-5-2. 오류 수정 검증 (리스트 형태가 아니거나, 빈 리스트인 경우)
+                    if (not isinstance(corrected_sql, list)) or (len(corrected_sql)) < 1:
+                        # ❌ AI가 제대로 된 SQL을 생성하지 못함
                         print(f"{self.sql_id}: Not a valid SQL: {corrected_sql}")
-                        continue
-                    corrected_sql = max(corrected_sql, key=len)
+                        continue # 다음 시도로 넘어감
+
+                    # 2-5-3. 정상적인 SQL 생성 시 실행
+                    corrected_sql = max(corrected_sql, key=len) # 가장 긴 SQL 선택
+                    
+                    # 2-5-4. 오류 수정 결과 실행
                     results = self.sql_env.execute_sql_api(corrected_sql, self.sql_id, api=self.api, max_len=self.csv_max_len, sqlite_path=self.sqlite_path)
                     logger.info("[Results for corrected sql]\n"+str(results)+"\n[Results for corrected sql]")
                     max_try -= 1
                     simplify = False
 
+                # 2-5-5. 오류 수정 성공 시 결과 저장
                 if isinstance(results, str) and results != self.empty_result:
-                    error_rec.append(1)
+                    error_rec.append(1) # 오류 수정 성공 시 1로 저장
+
+                    # 2-5-6. 오류 수정 성공 시 다른 SQL들도 수정 시도
                     if sqls != []:
                         response = self.chat_session_pre.get_model_response(self.prompt_class.get_exploration_refine_prompt(sql, corrected_sql, sqls), "sql")
 
@@ -105,6 +130,7 @@ class REFORCE:
                                 except:
                                     pass
                             if len(response_sqls) >= len(sqls) // 2:
+                                # 기존 SQL의 절반 이상을 수정했을 때, LLM이 수정 요청을 잘 이해했다고 판단 -> 수정된 SQL로 기존 SQL을 대체
                                 sqls = response_sqls
                                 logger.info("[Corrected other sqls]\n"+self.chat_session_pre.messages[-1]['content']+"\n[Corrected other sqls]")
                 else:
@@ -123,7 +149,7 @@ class REFORCE:
 
     def self_correct(self, sql, error, logger, simplify=False):
         """
-        SQL 오류 수정 메커니즘 (단발성)
+        '후보 SQL' 오류 수정 메커니즘 (단발성)
         : 오류가 있는 SQL을 수정하고, 수정된 SQL을 반환합니다. (GPT 모델을 통해 수정)
 
         Args:
@@ -269,7 +295,7 @@ class REFORCE:
             
             if executed_result == '0':
                 if not args.do_self_consistency:
-                    with open(sql_save_path, "w") as f:
+                    with open(sql_save_path, "w", encoding='utf-8') as f:
                         f.write(response)
                         break                    
                 self_consistency_prompt = self.prompt_class.get_self_consistency_prompt(question, format_csv)
@@ -306,7 +332,7 @@ class REFORCE:
                 else:
                     # self-consistency
                     logger.info(f"[Consistent results]\n{hard_cut(csv_data_str, 500)}\n[Consistent results]")
-                    with open(sql_save_path, "w") as f:
+                    with open(sql_save_path, "w", encoding='utf-8') as f:
                         f.write(response)
                     break
                 
@@ -347,7 +373,7 @@ class REFORCE:
         response = response[0]
         executed_result = self.sql_env.execute_sql_api(response, self.sql_id, csv_save_path, api=self.api, sqlite_path=self.sqlite_path)
         if executed_result == '0':
-            with open(sql_save_path, "w") as f:
+            with open(sql_save_path, "w", encoding='utf-8') as f:
                 f.write(response)
 
     def model_vote(self, result, sql_paths, search_directory, args, table_info, task):
@@ -388,9 +414,9 @@ class REFORCE:
             selected_sql = f.read()
         sql_env = SqlEnv()
         if sql_env.execute_sql_api(selected_sql, self.sql_id, self.complete_csv_save_path, api=self.api, sqlite_path=self.sqlite_path) == '0':
-            with open(self.complete_sql_save_path, "w") as f:
+            with open(self.complete_sql_save_path, "w", encoding='utf-8') as f:
                 f.write(selected_sql)
-            with open(self.complete_vote_log_path, "w") as f:
+            with open(self.complete_vote_log_path, "w", encoding='utf-8') as f:
                 f.write("[Vote]\n"+prompt+"\n[Vote]")
                 f.write(chat_session.messages[-1]['content'])
         sql_env.close_db()
