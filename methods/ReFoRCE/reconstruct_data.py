@@ -228,12 +228,12 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
     print(f"📂 대상 폴더: {example_folder}")
     print(f"📋 처리할 예제 수: {len(entries)}개")
     print(f"⚙️  옵션 설정:")
-    print(f"   - 설명 추가: {'✅' if add_description else '❌'}")
-    print(f"   - 샘플 데이터 추가: {'✅' if add_sample_rows else '❌'}")
-    print(f"   - 숫자 제거: {'✅' if rm_digits else '❌'}")
-    print(f"   - 긴 설명 제거: {'✅' if clear_long_eg_des else '❌'}")
-    print(f"   - 골드 테이블 사용: {'✅' if use_gold_table else '❌'}")
-    print(f"   - 골드 스키마 사용: {'✅' if use_gold_schema else '❌'}")
+    print(f"   - add_description: {'✅' if add_description else '❌'}")
+    print(f"   - add_sample_rows: {'✅' if add_sample_rows else '❌'}")
+    print(f"   - rm_digits: {'✅' if rm_digits else '❌'}")
+    print(f"   - clear_long_eg_des: {'✅' if clear_long_eg_des else '❌'}")
+    print(f"   - use_gold_table: {'✅' if use_gold_table else '❌'}")
+    print(f"   - use_gold_schema: {'✅' if use_gold_schema else '❌'}")
     print()
     
     # 1. 각 example 폴더 순회
