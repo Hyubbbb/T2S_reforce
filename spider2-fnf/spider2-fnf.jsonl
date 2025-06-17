@@ -1,2 +1,2 @@
-{"instance_id": "fnf_001", "instruction": "2025년 6월 8일 마감일자 기준 매출이 가장 높은 제품은?", "db_id": "FNF", "external_knowledge": "style_ranking_guide.md"}
-{"instance_id": "fnf_002", "instruction": "2025년 6월 8일 마감일자 기준 판매수량이 가장 높은 제품은?", "db_id": "FNF", "external_knowledge": "style_ranking_guide.md"}
+{"instance_id": "fnf_001", "instruction": "2025년 6월 8일 마감일자 기준 한 주동안 MLB 내에서 매출이 가장 높은 제품은?", "db_id": "FNF", "external_knowledge": "style_ranking_guide.md"}
+{"instance_id": "fnf_002", "instruction": "2025년 6월 8일 마감일자 기준 한 주동안 MLB 내에서 판매수량이 가장 높은 제품은?", "db_id": "FNF", "external_knowledge": "style_ranking_guide.md"}
