@@ -8,6 +8,16 @@ import sqlglot
 from sqlglot.expressions import Table, Column, CTE
 
 def extract_all_blocks(main_content, code_format):
+    """
+    마크다운 형식의 코드 블록들을 모두 추출하는 파서 함수
+
+    Args:
+        main_content (str): 마크다운 형식의 코드 블록들이 포함된 문자열
+        code_format (str): 추출할 코드 블록의 형식
+
+    Returns:
+        sql_blocks (list): 추출된 코드 블록들의 리스트
+    """
     sql_blocks = []
     start = 0
     
@@ -166,11 +176,21 @@ def clear_description(table_info):
 def get_table_info(test_path, sql_data, api, clear_des=False, full_tb_info=None):
     """
     테이블 정보를 가져오는 함수
+    
+    Args:
+        test_path: "examples_snow" (예제들이 있는 기본 경로)
+        sql_data: "sf_bq001" (처리할 인스턴스 ID)
+        api: "snowflake" (데이터베이스 타입)
+        clear_des: True (Description 제거 여부)
+        full_tb_info: None 또는 캐시된 테이블 정보 딕셔너리
+    
+    Returns:
+        table_info: GPT 프롬프트에 포함될 테이블 스키마 정보 (문자열)
     """
     if full_tb_info:
         return full_tb_info[sql_data]
     else:
-        table_info_txt = ["prompts.txt"]      
+        table_info_txt = ["prompts.txt"]
         table_info = ''
         for txt in table_info_txt:
             txt_path = search_file(os.path.join(test_path, sql_data), txt)

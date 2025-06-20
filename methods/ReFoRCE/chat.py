@@ -62,9 +62,11 @@ class GPTChat:
                     sys.exit(0)
                 print(e)
                 return e
-            choices = response.choices
+            choices = response.choices # GPT 응답
             if choices:
+                # GPT 응답 추출
                 main_content = choices[0].message.content
+                # GPT 응답 중 SQL 코드만 파싱
                 sql_query = extract_all_blocks(main_content, code_format)
             self.messages.append({"role": "assistant", "content": main_content})
             if not sql_query:

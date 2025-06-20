@@ -28,32 +28,46 @@ omni_sql_input_prompt_template = '''작업 개요:
 class Prompts:
     def __init__(self):
         pass
+
     def get_condition_onmit_tables(self):
-        return ["-- 모든 것 포함", "-- 생략", "-- 계속", "-- 모든 것 통합", "-- ...", "-- 모든 것 나열", "-- 이것을 대체", "-- 각 테이블", "-- 기타 추가"]
+        """LLM이 자주 사용하는 생략 표현들을 미리 정의"""
+        # return ["-- 모든 것 포함", "-- 생략", "-- 계속", "-- 모든 것 통합", "-- ...", "-- 모든 것 나열", "-- 이것을 대체", "-- 각 테이블", "-- 기타 추가"]
+        return ["-- Include all", "-- Omit", "-- Continue", "-- Union all", "-- ...", "-- List all", "-- Replace this", "-- Each table", "-- Add other"]
+
     def get_prompt_dialect_list_all_tables(self, table_struct, api):
+        """UNION 연산을 수행할 때 모든 테이블 이름을 명시적으로 나열하는 것을 권장 & 생략 표현 제공"""
         if api == "snowflake":
-            return f"여러 테이블에 대해 UNION 연산을 수행할 때는 모든 테이블 이름을 명시적으로 나열하세요. 먼저 Union을 수행한 후 조건과 선택을 추가하세요. 예: SELECT \"col1\", \"col2\" FROM (TABLE1 UNION ALL TABLE2) WHERE ...; 다음과 같이 작성하지 마세요: (SELECT col1, col2 FROM TABLE1 WHERE ...) UNION ALL (SELECT col1, col2 FROM TABLE2 WHERE ...); {self.get_condition_onmit_tables()}를 사용하여 테이블을 생략하지 마세요. 여기 테이블 이름들: {table_struct}\n"
+            return f"여러 테이블에 대해 UNION 연산을 수행할 때는 모든 테이블 이름을 명시적으로 나열하세요. 먼저 Union을 수행한 후 조건과 선택을 추가하세요. 예: SELECT \"col1\", \"col2\" FROM (TABLE1 UNION ALL TABLE2) WHERE ...; 다음과 같이 작성하지 마세요: (SELECT col1, col2 FROM TABLE1 WHERE ...) UNION ALL (SELECT col1, col2 FROM TABLE2 WHERE ...); {self.get_condition_onmit_tables()}를 사용하여 테이블을 생략하지 마세요. 테이블 이름들: {table_struct}\n"
         elif api == "bigquery":
             return "유사한 접두사를 가진 여러 테이블에 대해 UNION 연산을 수행할 때는 와일드카드 테이블을 사용하여 쿼리를 단순화할 수 있습니다. 예: SELECT col1, col2 FROM `project_id.dataset_id.table_prefix*` WHERE _TABLE_SUFFIX IN ('table1_suffix', 'table2_suffix'); 꼭 필요한 경우가 아니면 테이블을 수동으로 나열하는 것을 피하세요.\n"
         else:
             return ""
-    def get_prompt_fuzzy_query(self):
-        return "문자열 매칭 시나리오에서 문자열이 확정된 경우 퍼지 쿼리를 사용하지 마세요. 예: \"book\"이라는 단어가 포함된 객체의 제목 가져오기\n하지만 문자열이 확정되지 않은 경우 퍼지 쿼리를 사용하고 대소문자를 구분하지 마세요. 예: \"교육\"을 언급하는 기사 가져오기.\n"
+    
+    # 데이터 품질 관련 함수들
+    def get_prompt_fuzzy_query(self): # ?
+        return "문자열 매칭 시나리오에서 문자열이 확정된 경우 fuzzy query를 사용하지 마세요. 예: \"book\"이라는 단어가 포함된 객체의 제목 가져오기\n하지만 문자열이 확정되지 않은 경우 fuzzy query를 사용하고 대소문자를 구분하지 마세요. 예: \"교육\"을 언급하는 기사 가져오기.\n"
+    
     def get_prompt_decimal_places(self):
         return "작업 설명에서 소수점 자릿수를 지정하지 않은 경우 모든 소수를 네 자리까지 유지하세요.\n"
+    
     def get_prompt_convert_symbols(self):
         return "문자열 매칭 시나리오에서 비표준 기호를 '%'로 변환하세요. 예: ('he's를 he%s로)\n"
+    
+    # 지식 제한 함수
     def get_prompt_knowledge(self):
         return "당신의 지식은 데이터베이스의 정보를 기반으로 합니다. 자신의 지식을 사용하지 마세요.\n"
+    
+    # 데이터베이스 방언 관련 함수들
     def get_prompt_dialect_nested(self, api):
         if api == "snowflake":
-            return "JSON 중첩 형식의 컬럼의 경우: 예: SELECT t.\"column_name\", f.value::VARIANT:\"key_name\"::STRING AS \"abstract_text\" FROM PATENTS.PATENTS.PUBLICATIONS t, LATERAL FLATTEN(input => t.\"json_column_name\") f; 작업에 직접 답하지 말고 모든 컬럼 이름이 큰따옴표로 묶여 있는지 확인하세요. event_params와 같은 중첩 컬럼의 구조를 모르는 경우 먼저 전체 컬럼을 확인하세요: SELECT f.value FROM table, LATERAL FLATTEN(input => t.\"event_params\") f;\n"
+            return "JSON nested format의 컬럼의 경우: 예: SELECT t.\"column_name\", f.value::VARIANT:\"key_name\"::STRING AS \"abstract_text\" FROM PATENTS.PATENTS.PUBLICATIONS t, LATERAL FLATTEN(input => t.\"json_column_name\") f; 작업에 직접 답하지 말고 모든 컬럼 이름이 큰따옴표로 묶여 있는지 확인하세요. event_params와 같은 중첩 컬럼의 구조를 모르는 경우 먼저 전체 컬럼을 확인하세요: SELECT f.value FROM table, LATERAL FLATTEN(input => t.\"event_params\") f;\n"
         elif api == "bigquery":
-            return "중첩된 JSON 컬럼에서 특정 키 추출: SELECT t.\"column_name\", JSON_EXTRACT_SCALAR(f.value, \"$.key_name\") AS \"abstract_text\" FROM `database.schema.table` AS t, UNNEST(JSON_EXTRACT_ARRAY(t.\"json_column_name\")) AS f;\n중첩 컬럼(예: event_params)의 구조를 모르는 경우 먼저 전체 컬럼을 검사하세요: SELECT f.value FROM `project.dataset.table` AS t, UNNEST(JSON_EXTRACT_ARRAY(t.\"event_params\")) AS f;\n"
+            return "Nested JSON 컬럼에서 특정 키 추출: SELECT t.\"column_name\", JSON_EXTRACT_SCALAR(f.value, \"$.key_name\") AS \"abstract_text\" FROM `database.schema.table` AS t, UNNEST(JSON_EXTRACT_ARRAY(t.\"json_column_name\")) AS f;\nNested 컬럼(예: event_params)의 구조를 모르는 경우 먼저 전체 컬럼을 검사하세요: SELECT f.value FROM `project.dataset.table` AS t, UNNEST(JSON_EXTRACT_ARRAY(t.\"event_params\")) AS f;\n"
         elif api == "sqlite":
-            return "중첩된 JSON 컬럼에서 특정 키 추출: SELECT t.\"column_name\", json_extract(f.value, '$.key_name') AS \"abstract_text\" FROM \"table_name\" AS t, json_each(t.\"json_column_name\") AS f;\n중첩 컬럼(예: event_params)의 구조를 모르는 경우 먼저 전체 컬럼을 검사하세요: SELECT f.value FROM \"table_name\" AS t, json_each(t.\"event_params\") AS f;\n"
+            return "Nested JSON 컬럼에서 특정 키 추출: SELECT t.\"column_name\", json_extract(f.value, '$.key_name') AS \"abstract_text\" FROM \"table_name\" AS t, json_each(t.\"json_column_name\") AS f;\nNested 컬럼(예: event_params)의 구조를 모르는 경우 먼저 전체 컬럼을 검사하세요: SELECT f.value FROM \"table_name\" AS t, json_each(t.\"event_params\") AS f;\n"
         else:
             return "지원되지 않는 API입니다. 유효한 API 이름('snowflake', 'bigquery', 'sqlite')을 제공해주세요."
+        
     def get_prompt_dialect_basic(self, api):
         if api == "snowflake":
             return "```sql\nSELECT \"COLUMN_NAME\" FROM DATABASE.SCHEMA.TABLE WHERE ... ``` (\"DATABASE\", \"SCHEMA\", \"TABLE\"을 실제 이름에 맞게 조정하고, 모든 컬럼 이름이 큰따옴표로 묶여 있는지 확인하세요)"
@@ -63,13 +77,14 @@ class Prompts:
             return "```sql\nSELECT DISTINCT \"column_name\" FROM \"table_name\" WHERE ... ``` (\"table_name\"을 실제 테이블 이름으로 바꾸세요. 특수 문자가 포함되거나 예약어와 일치하는 경우 테이블과 컬럼 이름을 큰따옴표로 묶으세요.)"
         else:
             raise NotImplementedError("지원되지 않는 API입니다. 유효한 API 이름('snowflake', 'bigquery', 'sqlite')을 제공해주세요.")
+    
     def get_prompt_dialect_string_matching(self, api):
         if api == "snowflake":
-            return "확신이 서지 않는 경우 문자열을 직접 매치하지 마세요. 먼저 퍼지 쿼리를 사용하세요: WHERE str ILIKE \"%target_str%\" 문자열 매칭의 경우, 예를 들어 meat lovers, 공백을 %로 바꿔야 합니다. 예: ILIKE %meat%lovers%.\n"
+            return "확신이 서지 않는 경우 문자열을 직접 매치하지 마세요. 먼저 fuzzy query를 사용하세요: WHERE str ILIKE \"%target_str%\" 문자열 매칭의 경우, 예를 들어 meat lovers, 공백을 %로 바꿔야 합니다. 예: ILIKE %meat%lovers%.\n"
         elif api == "bigquery":
-            return "확신이 서지 않는 경우 문자열을 직접 매치하지 마세요. 퍼지 쿼리에는 LOWER를 사용하세요: WHERE LOWER(str) LIKE LOWER('%target_str%'). 예를 들어 'meat lovers'를 매치하려면 LOWER(str) LIKE '%meat%lovers%'를 사용하세요.\n"
+            return "확신이 서지 않는 경우 문자열을 직접 매치하지 마세요. fuzzy query에는 LOWER를 사용하세요: WHERE LOWER(str) LIKE LOWER('%target_str%'). 예를 들어 'meat lovers'를 매치하려면 LOWER(str) LIKE '%meat%lovers%'를 사용하세요.\n"
         elif api == "sqlite":
-            return "확신이 서지 않는 경우 문자열을 직접 매치하지 마세요. 퍼지 쿼리의 경우: WHERE str LIKE '%target_str%'를 사용하세요. 예를 들어 'meat lovers'를 매치하려면 WHERE str LIKE '%meat%lovers%'를 사용하세요. 대소문자 구분이 필요한 경우 COLLATE BINARY를 추가하세요: WHERE str LIKE '%target_str%' COLLATE BINARY.\n"
+            return "확신이 서지 않는 경우 문자열을 직접 매치하지 마세요. fuzzy query의 경우: WHERE str LIKE '%target_str%'를 사용하세요. 예를 들어 'meat lovers'를 매치하려면 WHERE str LIKE '%meat%lovers%'를 사용하세요. 대소문자 구분이 필요한 경우 COLLATE BINARY를 추가하세요: WHERE str LIKE '%target_str%' COLLATE BINARY.\n"
         else:
             raise NotImplementedError("지원되지 않는 API입니다. 유효한 API 이름('snowflake', 'bigquery', 'sqlite')을 제공해주세요.")
 
@@ -112,15 +127,15 @@ class Prompts:
         return f"입력 SQL:\n{sql}\n오류 정보:\n" + str(error) + "\n이전 컨텍스트를 바탕으로 수정하고 ```sql\n--설명: \n``` 형식으로 사고 과정과 함께 하나의 SQL 쿼리만 출력하세요. SQL 없이 분석만 하거나 여러 SQL을 출력하지 마세요.\n"
 
     def get_self_refine_prompt(self, table_info, task, pre_info, question, api, format_csv, table_struct, omnisql_format_pth=None):
-        if omnisql_format_pth:
-            if task == "lite":
-                return omni_sql_input_prompt_template.format(
-                    db_engine = "SQLite",
-                    db_details = table_info,
-                    question = question
-                )
-            elif task == "BIRD":
-                return table_info
+        # if omnisql_format_pth:
+        #     if task == "lite":
+        #         return omni_sql_input_prompt_template.format(
+        #             db_engine = "SQLite",
+        #             db_details = table_info,
+        #             question = question
+        #         )
+        #     elif task == "BIRD":
+        #         return table_info
         refine_prompt = table_info + "\n"
         refine_prompt += "컬럼 탐색 후 몇 가지 few-shot 예시가 도움이 될 수 있습니다:\n" + pre_info if pre_info else ""
 
@@ -140,7 +155,7 @@ class Prompts:
         refine_prompt += "두 테이블을 묻는 경우 두 테이블을 결합하는 대신 마지막 것으로 답변해야 합니다. 예: 상위 5개 주를 식별하고 ... 전체 4위인 주를 검토하고 그 주의 상위 5개 카운티를 식별하세요. 상위 5개 카운티만 답변해야 합니다.\n"
         if api == "snowflake":
             refine_prompt += "더 정확한 답변을 위해 두 지리적 지점 간의 거리를 계산할 때 ST_DISTANCE를 사용하세요.\n"
-        refine_prompt += self.get_prompt_decimal_places()
+        refine_prompt += self.get_prompt_decimal_places() # 소숫점 default 4자리
         
         return refine_prompt
 

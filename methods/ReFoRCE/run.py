@@ -12,6 +12,8 @@ import json
 import re
 
 def execute(question, table_info, args, csv_save_path, log_save_path, sql_save_path, search_directory, format_csv, sql_data):
+    """
+    """
     print(f"      🔄 SQL 생성 시작: {sql_data}/{sql_save_path}")
     
     db_id = None
@@ -47,7 +49,7 @@ def execute(question, table_info, args, csv_save_path, log_save_path, sql_save_p
     logger = initialize_logger(log_file_path)
     if format_csv:
         logger.info("[답변 형식]\n" + format_csv + "\n[답변 형식]")
-    table_struct = table_info[table_info.find("The table structure information is "):]
+    table_struct = table_info[table_info.find("테이블 구조 정보"):]
 
     # 2. GPT 채팅 세션 초기화
     print(f"        🤖 GPT 세션 초기화 중...")
@@ -61,7 +63,18 @@ def execute(question, table_info, args, csv_save_path, log_save_path, sql_save_p
         print(f"        ⚡ SQL Generation 세션 준비 완료: {args.generation_model}")
 
     # 3. REFORCE 에이전트 생성
-    agent = REFORCE(args.db_path, sql_data, search_directory, prompt_all, sql_env, chat_session_ex, chat_session, sql_data+'/'+log_save_path, db_id, task=args.task)
+    agent = REFORCE(
+        args.db_path,      # "examples_fnf" 
+        sql_data,          # "fnf001"
+        search_directory,  # "output/o3-fnf-no-exploration-log-20241215-143022/fnf001"
+        prompt_all,        # Prompts() 인스턴스
+        sql_env,           # SQL 실행 환경
+        chat_session_ex,   # Column Exploration용 GPT 세션
+        chat_session,      # SQL Generation용 GPT 세션
+        sql_data+'/'+log_save_path,  # 로그 식별자
+        db_id,             # 데이터베이스 ID
+        task=args.task     # 태스크 정보
+    )
 
     # do_column_exploration
     pre_info, response_pre_txt = None, None
@@ -158,21 +171,21 @@ def process_sql_data(sql_data): # sql_data = "sf_bq070"
     if not os.path.exists(search_directory):
         os.makedirs(search_directory)
 
-    # sqlite task
-    if args.subtask == "sqlite":
-        if not sql_data.startswith("local"):
-            print(f"    ⏭️  SQLite 서브태스크: local이 아닌 인스턴스 스킵")
-            return
+    # # sqlite task
+    # if args.subtask == "sqlite":
+    #     if not sql_data.startswith("local"):
+    #         print(f"    ⏭️  SQLite 서브태스크: local이 아닌 인스턴스 스킵")
+    #         return
 
-    # Get BIRD gold res
-    if args.task == "BIRD":
-        gold_pth = os.path.join(args.BIRD_gold_result_path, sql_data+".csv")
-        if not os.path.exists(gold_pth):
-            print(f"    🏆 BIRD 골드 결과 생성 중...")
-            sql_env = SqlEnv()
-            res = sql_env.execute_sql_api(full_gold_sql[sql_data], sql_data, gold_pth, sqlite_path=get_sqlite_path(args.db_path, sql_data, full_db_id[sql_data], args.task), timeout=1200)
-            assert res == "0", (sql_data, res)
-            print(f"    ✅ BIRD 골드 결과 생성 완료")
+    # # Get BIRD gold res
+    # if args.task == "BIRD":
+    #     gold_pth = os.path.join(args.BIRD_gold_result_path, sql_data+".csv")
+    #     if not os.path.exists(gold_pth):
+    #         print(f"    🏆 BIRD 골드 결과 생성 중...")
+    #         sql_env = SqlEnv()
+    #         res = sql_env.execute_sql_api(full_gold_sql[sql_data], sql_data, gold_pth, sqlite_path=get_sqlite_path(args.db_path, sql_data, full_db_id[sql_data], args.task), timeout=1200)
+    #         assert res == "0", (sql_data, res)
+    #         print(f"    ✅ BIRD 골드 결과 생성 완료")
 
     # Get table information
     print(f"    📊 테이블 정보 로드 중...")
@@ -318,44 +331,46 @@ if __name__ == '__main__':
 
     full_gold_sql = {}      # 골드 SQL (BIRD 태스크용)
 
-    # 2-1. 특수 형식 파일 처리 (omnisql_format_pth가 있는 경우)
-    if args.omnisql_format_pth:
-        # SQLite 또는 BIRD 태스크용 특별 처리
+    # # 2-1. 특수 형식 파일 처리 (omnisql_format_pth가 있는 경우)
+    # if args.omnisql_format_pth:
+    #     # SQLite 또는 BIRD 태스크용 특별 처리
         
-        # SQLite 태스크용 처리
-        if args.subtask == "sqlite":
-            with open(args.omnisql_format_pth) as f:
-                data = json.load(f)
-            dictionaries = []
-            task_dict = {}
-            full_tb_info = {}
+    #     # SQLite 태스크용 처리
+    #     if args.subtask == "sqlite":
+    #         with open(args.omnisql_format_pth) as f:
+    #             data = json.load(f)
+    #         dictionaries = []
+    #         task_dict = {}
+    #         full_tb_info = {}
             
-            for example in data:
-                if example["instance_id"].startswith("local"):
-                    dictionaries.append(example["instance_id"])
-                    task_dict[example["instance_id"]] = example["question"]
-                    full_tb_info[example["instance_id"]] = example["db_desc"]
-                    full_db_id[example["instance_id"]] = example["db_id"]
+    #         for example in data:
+    #             if example["instance_id"].startswith("local"):
+    #                 dictionaries.append(example["instance_id"])
+    #                 task_dict[example["instance_id"]] = example["question"]
+    #                 full_tb_info[example["instance_id"]] = example["db_desc"]
+    #                 full_db_id[example["instance_id"]] = example["db_id"]
 
-        # BIRD 태스크용 처리
-        elif args.task == "BIRD":
-            with open(args.omnisql_format_pth) as f:
-                data = json.load(f)
-            dictionaries = []
-            task_dict = {}
-            full_tb_info = {}
+    #     # BIRD 태스크용 처리
+    #     elif args.task == "BIRD":
+    #         with open(args.omnisql_format_pth) as f:
+    #             data = json.load(f)
+    #         dictionaries = []
+    #         task_dict = {}
+    #         full_tb_info = {}
             
-            for example in data:
-                q_id = example["question_id"]
-                instance_id = f"local_BIRD_{q_id:04d}"
-                dictionaries.append(instance_id)
-                task_dict[instance_id] = example["question"]
-                full_tb_info[instance_id] = example["input_seq"]
-                full_db_id[instance_id] = example["db_id"]     
-                full_gold_sql[instance_id] = example["SQL"]                     
-    else:
-        # 일반적인 경우: 기본 딕셔너리 및 태스크 정보 로드
-        dictionaries, task_dict = get_dictionary(args.db_path, args.task)
+    #         for example in data:
+    #             q_id = example["question_id"]
+    #             instance_id = f"local_BIRD_{q_id:04d}"
+    #             dictionaries.append(instance_id)
+    #             task_dict[instance_id] = example["question"]
+    #             full_tb_info[instance_id] = example["input_seq"]
+    #             full_db_id[instance_id] = example["db_id"]     
+    #             full_gold_sql[instance_id] = example["SQL"]                     
+    # else:
+    #     # 일반적인 경우: 기본 딕셔너리 및 태스크 정보 로드
+    #     dictionaries, task_dict = get_dictionary(args.db_path, args.task)
+    # 일반적인 경우: 기본 딕셔너리 및 태스크 정보 로드
+    dictionaries, task_dict = get_dictionary(args.db_path, args.task)
 
     # 2-2. 메인 프로세스 실행 (병렬 처리)
     main(args)
